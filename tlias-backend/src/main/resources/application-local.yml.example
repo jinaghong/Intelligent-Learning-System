@@ -1,0 +1,29 @@
+# ============================================================
+#  模板文件（本文件会提交到 git，作用是让别人知道要填哪些键）
+#
+#  用法：复制一份，改名为 application-local.yml，再填入真实值。
+#  application-local.yml 已被 .gitignore 排除，永远不会进 git。
+#
+#  另一条路：不改文件，直接设操作系统环境变量（DB_PASSWORD /
+#  DEEPSEEK_API_KEY 等），环境变量优先级最高，会覆盖这里的值。
+# ============================================================
+
+spring:
+  datasource:
+    # P1 接入 MyBatis-Plus 后开始生效。填 MySQL 的 root 密码。
+    password: "填你的MySQL密码"
+
+ai:
+  deepseek:
+    # P8 阶段（AI 增强）才需要。没有 key 时 AiAssistantService 会自动
+    # 走规则降级实现，接口不会 500，所以前期完全可以不填。
+    api-key: "填sk开头的密钥"
+
+aliyun:
+  oss:
+    # 待 bucket 开通后再填。在此之前项目走 LocalFileStorageServiceImpl，
+    # 图片存在本地 uploads/ 目录，不需要任何阿里云凭据。
+    access-key-id: ""
+    access-key-secret: ""
+    bucket-name: ""
+    endpoint: ""

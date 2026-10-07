@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: tlias-backend
+  profiles:
+    active: dev
+    # profile 分组：激活 dev 时自动连带激活 local。
+    # 好处是 IDEA 里直接点运行就等价于 --spring.profiles.active=dev,local，
+    # 不用每次手敲启动参数（漏敲的话真实密码读不到，报错还很难看懂）。
+    # local 对应 application-local.yml，已被 .gitignore 排除；
+    # 该文件现在还不存在，Spring Boot 对「profile 激活了但没有对应文件」不报错。
+    group:
+      dev: local
+
+server:
+  port: 8080
+  servlet:
+    # 所有接口的统一前缀。控制器里写 /health，浏览器实际访问 /api/health。
+    # 前端 Vite 把 /api 代理到 8080 时就不需要再做路径重写。
+    context-path: /api

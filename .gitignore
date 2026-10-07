@@ -1,0 +1,59 @@
+# ============================================================
+#  tlias 智能学习辅助系统 · .gitignore
+#  铁律：本文件必须先于任何含密钥的配置存在
+# ============================================================
+
+# ---------- 敏感配置（最重要，绝不入库） ----------
+# application-local.yml 存放真实的数据库密码 / DeepSeek API Key / OSS AK-SK
+application-local.yml
+application-*.local.yml
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ---------- Maven ----------
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+
+# ---------- 前端 Node / Vite ----------
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# ---------- 本地上传的文件（运行时产物，不是源码） ----------
+uploads/
+
+# ---------- 日志 ----------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------- IDE：IntelliJ IDEA ----------
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# ---------- IDE：VS Code ----------
+.vscode/
+!.vscode/extensions.json
+
+# ---------- 操作系统 ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini

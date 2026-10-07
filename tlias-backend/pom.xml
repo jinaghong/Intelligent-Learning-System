@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.16</version>
+        <!-- 留空表示「去仓库里找 parent」，而不是「去上级目录找 parent pom.xml」 -->
+        <relativePath/>
+    </parent>
+
+    <groupId>com.hjh</groupId>
+    <artifactId>tlias-backend</artifactId>
+    <version>1.0.0</version>
+    <name>tlias-backend</name>
+    <description>tlias 智能学习辅助系统 - 后端</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- 第三方库的版本号在这里集中定义，加依赖时引用 ${xxx.version}。
+             刻意不提前声明用不到的版本：未经验证的版本号写在这里会显得像已核实，
+             实际只是猜测。每个版本在它真正被引入的那个阶段验证后再加。 -->
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- P0 阶段刻意只放上面三个依赖。
+             MyBatis-Plus / mysql-connector-j 留到 P1（那时 tlias 库已建好）：
+             它们会触发 Spring Boot 的 DataSource 自动配置，数据库还不存在时
+             应用会直接启动失败，而不是「先跑起来再说」。
+             validation 留到 P3（第一次需要校验入参时），springdoc 留到 P1，
+             EasyExcel 留到 P4，jjwt 留到 P2，Spring AI 留到 P8，OSS SDK 待 bucket 开通。 -->
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <!-- Lombok 只在编译期生成 getter/setter，运行期不需要它，
+                             打进 jar 是纯粹的体积浪费 -->
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

@@ -1,0 +1,7 @@
+# 本文件提交到 git：只放开发环境里的非敏感配置。
+# 任何真实密码 / API Key 都不写在这里，写进 application-local.yml。
+
+logging:
+  level:
+    # 自己的包开 debug，能看到细节；第三方库保持默认 info，否则有用的日志会被淹掉
+    com.hjh.tlias: debug
