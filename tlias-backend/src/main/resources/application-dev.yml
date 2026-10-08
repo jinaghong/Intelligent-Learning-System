@@ -31,6 +31,17 @@ mybatis-plus:
       # 主键交给数据库的 AUTO_INCREMENT 生成，插入后 MyBatis-Plus 会回填 id
       id-type: auto
 
+# JWT 相关配置。secret-key 是签名密钥，绝不能用默认值或短字符串：
+#   - 太短不行：HS256 要求至少 256 位（32 字节），否则 jjwt 直接抛异常
+#   - 进 git 不行：密钥泄露后任何人都能伪造出「合法」的 token
+# 所以这里只写占位，真实值在 application-local.yml（已被 .gitignore 排除）
+tlias:
+  jwt:
+    token-name: tlias-token
+    # 12 小时。字段名是 ttl 不是 expire，因为这个值是「有效期长度」而不是「过期时刻」
+    ttl-millis: 43200000
+    secret-key: ${JWT_SECRET:}
+
 logging:
   level:
     # 自己的包开 debug。这一行同时让 MyBatis 把执行的 SQL 打印出来，
