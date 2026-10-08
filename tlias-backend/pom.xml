@@ -22,8 +22,9 @@
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- 第三方库的版本号在这里集中定义，加依赖时引用 ${xxx.version}。
-             刻意不提前声明用不到的版本：未经验证的版本号写在这里会显得像已核实，
-             实际只是猜测。每个版本在它真正被引入的那个阶段验证后再加。 -->
+             只登记已经用 mvn dependency:get 实测存在的版本，不提前写猜测值。 -->
+        <mybatis-plus.version>3.5.17</mybatis-plus.version>
+        <springdoc.version>2.8.17</springdoc.version>
     </properties>
 
     <dependencies>
@@ -38,18 +39,44 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 持久层。这个 starter 会连带引入 spring-boot-starter-jdbc 和 HikariCP 连接池 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
+
+        <!-- 必须单独引，且版本与上面的 starter 完全一致。
+             3.5.9 起 MyBatis-Plus 把 jsqlparser 从核心包里解耦了出去，
+             漏引的后果是启动时报 NoClassDefFoundError: PaginationInnerInterceptor -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
+
+        <!-- MySQL 驱动。版本由 spring-boot-starter-parent 托管，所以不写 <version>。
+             坐标是 com.mysql:mysql-connector-j，
+             不是旧的 mysql:mysql-connector-java（那个已废弃） -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- 根据代码自动生成 OpenAPI 文档，并附带一个 Swagger UI 网页，
+             可以直接在浏览器里点着调接口，不用手写 curl -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <!-- P0 阶段刻意只放上面三个依赖。
-             MyBatis-Plus / mysql-connector-j 留到 P1（那时 tlias 库已建好）：
-             它们会触发 Spring Boot 的 DataSource 自动配置，数据库还不存在时
-             应用会直接启动失败，而不是「先跑起来再说」。
-             validation 留到 P3（第一次需要校验入参时），springdoc 留到 P1，
-             EasyExcel 留到 P4，jjwt 留到 P2，Spring AI 留到 P8，OSS SDK 待 bucket 开通。 -->
     </dependencies>
 
     <build>

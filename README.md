@@ -69,8 +69,58 @@ cp application-local.yml.example application-local.yml
 
 ## 实施阶段
 
-P0 工程骨架 → P0.5 建库建表 → P1 通用层 → P2 登录认证 → P3 部门管理 →
+P0 工程骨架 → P0.5 建库建表 → **P1 通用层** → P2 登录认证 → P3 部门管理 →
 P4 员工管理 → P5 学员/班级/课程 → P6 数据统计 → P7 AOP 操作日志 →
 P8 AI 增强 → P9 前端整合
 
-当前进度：**P0 已完成**。
+| 阶段 | 状态 |
+|---|---|
+| P0 工程骨架 | ✅ 完成 |
+| P0.5 建库建表 | ✅ 完成（10 张表 + 253 行种子数据，已在 MySQL 8.0.36 实测验证） |
+| P1a 基础设施 | ✅ 完成（MyBatis-Plus、数据源、统一分页与异常处理） |
+| P1b 抽象层 | ⬜ 未开始（CacheService / FileStorageService） |
+| P2 及以后 | ⬜ 未开始 |
+
+## 数据库
+
+新建 `tlias` 库（utf8mb4 / InnoDB），与已有的 `library_db` 并存、互不影响。
+
+| 脚本 | 作用 |
+|---|---|
+| `db/schema.sql` | 建库 + 建 10 张表。⚠️ 重复执行会清空重建 |
+| `db/data.sql` | 253 行种子数据。可重复执行，开头会先按子表→父表顺序清空 |
+| `db/verify.sql` | 建完之后的自检，14 段检查。最后两段会**故意报错**以验证约束真的生效 |
+
+首次执行（在自己的终端里，密码自己输入）：
+
+```
+mysql -uroot -p --default-character-set=utf8mb4
+```
+
+```
+source D:/qoder/Inteligent-Learning-System/tlias-backend/src/main/resources/db/schema.sql
+source D:/qoder/Inteligent-Learning-System/tlias-backend/src/main/resources/db/data.sql
+source D:/qoder/Inteligent-Learning-System/tlias-backend/src/main/resources/db/verify.sql
+```
+
+`--default-character-set=utf8mb4` 不能省，否则中文会存成乱码。
+
+所有员工的登录密码统一为 `123456`，但库中 15 条 BCrypt 密文各不相同——这正是加盐的意义。
+
+## 测试
+
+```bash
+cd tlias-backend
+mvn test
+```
+
+`DbSmokeTest` 会验证数据源连通性，并把各表行数、中文编码、违纪汇总字段一致性、
+密码存储形式一次性核对完毕。运行前需先在 `application-local.yml` 填好数据库密码。
+
+## 接口文档
+
+启动后打开 Swagger UI，可以直接在浏览器里点着调接口：
+
+```
+http://localhost:8080/api/swagger-ui/index.html
+```

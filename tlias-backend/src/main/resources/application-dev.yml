@@ -1,7 +1,38 @@
 # 本文件提交到 git：只放开发环境里的非敏感配置。
 # 任何真实密码 / API Key 都不写在这里，写进 application-local.yml。
 
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 连接串里四个参数都有明确用途，少一个都会出问题：
+    #   serverTimezone=Asia/Shanghai      不写会和数据库差 8 小时（时区按 UTC 解释）
+    #   characterEncoding=utf8            不写中文可能变乱码
+    #   sslMode=DISABLED                  本机 MySQL 没配证书，强制 SSL 会连不上
+    #   allowPublicKeyRetrieval=true      MySQL 8 的 root 默认用 caching_sha2_password 认证，
+    #                                     非 SSL 连接下必须允许客户端向服务器索取公钥，
+    #                                     否则报 "Public Key Retrieval is not allowed"
+    url: jdbc:mysql://localhost:3306/tlias?serverTimezone=Asia/Shanghai&characterEncoding=utf8&sslMode=DISABLED&allowPublicKeyRetrieval=true
+    username: root
+    # ${DB_PASSWORD:} 的含义：读系统环境变量 DB_PASSWORD，读不到就用空字符串。
+    # 真实密码有两条路，任选其一：
+    #   1) 在 application-local.yml 里写 spring.datasource.password（本文件之后加载，会覆盖这里）
+    #   2) 设置系统环境变量 DB_PASSWORD
+    # 两条都不做的话密码为空，启动后会报数据库认证失败。
+    password: ${DB_PASSWORD:}
+
+mybatis-plus:
+  configuration:
+    # 数据库列 user_name 自动映射到 Java 属性 userName，
+    # 不用给每个字段写 @TableField("user_name")
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      # 主键交给数据库的 AUTO_INCREMENT 生成，插入后 MyBatis-Plus 会回填 id
+      id-type: auto
+
 logging:
   level:
-    # 自己的包开 debug，能看到细节；第三方库保持默认 info，否则有用的日志会被淹掉
+    # 自己的包开 debug。这一行同时让 MyBatis 把执行的 SQL 打印出来，
+    # 日志里会出现 ==>  Preparing / ==> Parameters / <==      Total 三段
     com.hjh.tlias: debug
