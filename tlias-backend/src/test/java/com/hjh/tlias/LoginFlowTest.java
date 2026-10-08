@@ -89,9 +89,20 @@ class LoginFlowTest {
     @DisplayName("3. token 被篡改 → 401")
     void tamperedTokenShouldReturn401() throws Exception {
         String token = jwtUtil.createToken(Map.of(JwtClaimsConstant.EMP_ID, 1L));
-        // 改掉签名部分的最后一个字符，签名就对不上了
-        char last = token.charAt(token.length() - 1);
-        String tampered = token.substring(0, token.length() - 1) + (last == 'A' ? 'B' : 'A');
+        // 改掉「签名部分正中间」的一个字符，签名就对不上了。
+        //
+        // 为什么不能改最后一个字符：HS256 签名是 32 字节，base64url 编码后
+        // 是 43 个字符，最后一个字符里只有 4 位是有效数据、剩下 2 位是填充位；
+        // 解码器通常忽略填充位，于是只改最后一个字符有约 1/16 的概率
+        // 解出完全相同的签名字节，验证照样通过，测试就会偶发变红
+        //（实测遇到过：期望 401，实际 200）。中间位置 6 位全部有效，
+        // 改动它一定能破坏签名。
+        int signatureStart = token.lastIndexOf('.') + 1;
+        int middle = signatureStart + (token.length() - signatureStart) / 2;
+        char original = token.charAt(middle);
+        String tampered = token.substring(0, middle)
+                + (original == 'a' ? 'b' : 'a')
+                + token.substring(middle + 1);
 
         mockMvc.perform(get("/login/me").header(jwtProperties.getTokenName(), tampered))
                 .andExpect(status().isUnauthorized());
