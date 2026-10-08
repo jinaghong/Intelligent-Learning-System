@@ -35,6 +35,15 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- 参数校验：@NotNull / @NotBlank / @Size 等注解 + @Valid 触发校验。
+             它本来是跟着 springdoc 传递进来的，能蹭到不代表可以依赖它——
+             哪天 springdoc 换版本不再传递，校验注解会「编译通过但运行期不生效」。
+             所以显式声明一次：我确实需要它。版本由 parent 托管 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

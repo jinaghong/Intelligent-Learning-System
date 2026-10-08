@@ -4,6 +4,7 @@ import com.hjh.tlias.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -51,6 +52,26 @@ public class GlobalExceptionHandler {
     public Result<Void> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
         log.warn("请求方法不支持: {}", e.getMessage());
         return Result.error("请求方法不支持，请检查该用 GET 还是 POST");
+    }
+
+    /**
+     * 参数校验失败：@Valid 校验 @RequestBody 没过时抛的就是这个异常。
+     *
+     * 和上面两个同理——它是「用户填错了」，不是「服务器炸了」。
+     * 不单独接住就会掉进兜底处理器，前端收到「系统繁忙，请稍后重试」，
+     * 用户完全不知道该改哪里。所以要把字段上的提示原文透出去。
+     *
+     * 一个 DTO 可能好几个字段同时不合格，这里只取第一条：
+     * 让用户一次改一项，比糊一大串更清楚。
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public Result<Void> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(fieldError -> fieldError.getDefaultMessage())
+                .orElse("请求参数不合法");
+        log.warn("参数校验失败: {}", message);
+        return Result.error(message);
     }
 
     /** 兜底：到这里说明是没预料到的程序错误，日志要打全栈，但对外只说一句话 */
