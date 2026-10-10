@@ -278,6 +278,74 @@ class EmpWriteTest {
     }
 
     // ------------------------------------------------------------------
+    //  边界与参数校验（2026-10-10 审查发现的修复）
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("15. 修改时不带 exprList：工作经历原样保留（null = 不动）")
+    void updateWithoutExprListShouldKeepExperiences() throws Exception {
+        Map<String, Object> body = empBody("keepExp", "保留经历");
+        body.put("exprList", List.of(experience("2020-01-01", "2021-01-01", "老东家", "工程师")));
+        postJson("/emps", body).andExpect(jsonPath("$.code").value(1));
+        long id = findEmpIdByUsername("keepExp");
+
+        Map<String, Object> update = empBody("keepExp", "保留经历改");
+        update.put("id", id);
+        // 刻意不带 exprList —— 省略字段不能被当成「清空」
+        putJson("/emps", update).andExpect(jsonPath("$.code").value(1));
+
+        assertEquals(1, countOf("SELECT COUNT(*) FROM emp_experience WHERE emp_id = " + id),
+                "没传 exprList 却把工作经历清空了——null 必须是「不动」");
+    }
+
+    @Test
+    @DisplayName("16. 修改时传空列表 []：工作经历被显式清空")
+    void updateWithEmptyExprListShouldClearExperiences() throws Exception {
+        Map<String, Object> body = empBody("clearExp", "清空经历");
+        body.put("exprList", List.of(experience("2020-01-01", "2021-01-01", "老东家", "工程师")));
+        postJson("/emps", body).andExpect(jsonPath("$.code").value(1));
+        long id = findEmpIdByUsername("clearExp");
+
+        Map<String, Object> update = empBody("clearExp", "清空经历");
+        update.put("id", id);
+        update.put("exprList", List.of());
+        putJson("/emps", update).andExpect(jsonPath("$.code").value(1));
+
+        assertEquals(0, countOf("SELECT COUNT(*) FROM emp_experience WHERE emp_id = " + id),
+                "传了空列表却还留着老经历——显式清空没生效");
+    }
+
+    @Test
+    @DisplayName("17. 修改时 deptId 不存在：业务错误码「部门不存在」，数据原样不动")
+    void updateWithBadDeptIdShouldFail() throws Exception {
+        long id = createEmp("badDeptU", "坏部门改");
+
+        Map<String, Object> body = empBody("badDeptU", "坏部门改");
+        body.put("id", id);
+        body.put("deptId", 999_999);
+        expectBusinessError(putJson("/emps", body), "部门不存在");
+
+        assertEquals(1L, jdbcTemplate.queryForObject(
+                "SELECT dept_id FROM emp WHERE id = " + id, Long.class),
+                "更新失败后 dept_id 不该被改动");
+    }
+
+    @Test
+    @DisplayName("18. 修改时连 id 都没传：业务错误码「员工 id 不能为空」")
+    void updateWithoutIdShouldFail() throws Exception {
+        expectBusinessError(putJson("/emps", empBody("noid", "没id")), "员工 id 不能为空");
+    }
+
+    @Test
+    @DisplayName("19. 新增时 deptId 不存在：业务错误码「部门不存在」")
+    void saveWithBadDeptIdShouldFail() throws Exception {
+        Map<String, Object> body = empBody("badDeptS", "坏部门增");
+        body.put("deptId", 999_999);
+
+        expectBusinessError(postJson("/emps", body), "部门不存在");
+    }
+
+    // ------------------------------------------------------------------
     //  测试自己的小工具
     // ------------------------------------------------------------------
 

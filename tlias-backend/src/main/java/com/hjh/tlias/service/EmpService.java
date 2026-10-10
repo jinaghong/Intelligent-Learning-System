@@ -20,7 +20,7 @@ public interface EmpService {
     /** 新增员工，连同工作经历一起保存 */
     void save(EmpDTO empDTO);
 
-    /** 修改员工，工作经历整体替换 */
+    /** 修改员工；工作经历三种传法：null = 不动、空列表 = 清空、非空 = 整体替换 */
     void update(EmpDTO empDTO);
 
     /** 批量删除员工 */

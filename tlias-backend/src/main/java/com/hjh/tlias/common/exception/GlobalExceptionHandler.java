@@ -3,6 +3,7 @@ package com.hjh.tlias.common.exception;
 import com.hjh.tlias.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.validation.BindException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -71,6 +72,25 @@ public class GlobalExceptionHandler {
                 .map(fieldError -> fieldError.getDefaultMessage())
                 .orElse("请求参数不合法");
         log.warn("参数校验失败: {}", message);
+        return Result.error(message);
+    }
+
+    /**
+     * 参数绑定校验失败：@Valid 标在「不是 @RequestBody 的参数」上时（比如 GET 请求的
+     * 查询串绑定到 DTO），校验没过抛的是这个异常。
+     *
+     * 它和上面的 MethodArgumentNotValidException 是父子关系（后者是子类、专管请求体），
+     * Spring 会挑更具体的处理器，两个共存不会打架。
+     * 不接住它会掉进兜底分支显示「系统繁忙」——用户只是把页码传成了 0，
+     * 却被告知服务器繁忙，和当初 404/405 被兜底揽走是同一类问题。
+     */
+    @ExceptionHandler(BindException.class)
+    public Result<Void> handleBindException(BindException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(fieldError -> fieldError.getDefaultMessage())
+                .orElse("请求参数不合法");
+        log.warn("参数绑定校验失败: {}", message);
         return Result.error(message);
     }
 

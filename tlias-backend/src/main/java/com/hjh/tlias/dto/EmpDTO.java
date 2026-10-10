@@ -57,7 +57,11 @@ public class EmpDTO {
     private Integer status;
 
     /**
-     * 工作经历列表，可以是 null 或空列表（表示这个员工没有经历）。
+     * 工作经历列表。
+     *
+     * 新增时：null 和空列表等价，都表示「这个员工没有经历」。
+     * 修改时：两者含义不同——null = 不动（省略字段不等于清空）、
+     * 空列表 = 把老经历清空、非空列表 = 整体替换成这一份。
      *
      * 字段上的 @Valid 作用是「级联校验」：不写它，只会校验 EmpDTO 自己的字段，
      * exprList 里每个 EmpExperienceDTO 上的 @NotBlank 全都不会执行——

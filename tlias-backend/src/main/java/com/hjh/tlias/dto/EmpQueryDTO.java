@@ -1,5 +1,6 @@
 package com.hjh.tlias.dto;
 
+import jakarta.validation.constraints.Min;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -38,7 +39,11 @@ public class EmpQueryDTO {
      * 这里给了默认值，含义是「前端不传就用它」。注意必须是包装类型 Integer
      * 而不是 int——int 的默认值是 0，传进来的 null 没法表达「没传」，
      * 而且页码从 0 开始是错的。
+     *
+     * @Min(1) 负责下限：page=0 或负数会被拦成业务错误码（GET 接口的参数上
+     * 必须配 @Valid，注解才会真正执行，见 EmpController）。
      */
+    @Min(value = 1, message = "页码必须从 1 开始")
     private Integer page = 1;
 
     /**
@@ -47,7 +52,11 @@ public class EmpQueryDTO {
      * 前端如果传一个很大的值想「一次拉全表」，会在分页插件那里被
      * MyBatisPlusConfig 里设的 setMaxLimit(500) 截住，最多只给 500 条。
      * 这是防止有人写 pageSize=999999999 把数据库拖垮。
+     *
+     * 下限由 @Min(1) 保证：0 和负数必须拦下——负数在分页插件里会走特殊分支
+     * （跳过 COUNT、LIMIT 被 maxLimit 兜底），返回 total=0 却有数据的矛盾响应。
      */
+    @Min(value = 1, message = "每页条数至少为 1")
     private Integer pageSize = 10;
 
 }

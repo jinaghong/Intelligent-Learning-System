@@ -196,6 +196,39 @@ class EmpFlowTest {
     }
 
     // ------------------------------------------------------------------
+    //  分页参数校验（2026-10-10 审查发现的修复）
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("11. page=0：业务错误码，而不是悄悄按第 1 页返回")
+    void invalidPageShouldFail() throws Exception {
+        mockMvc.perform(get("/emps").param("page", "0").header(jwtProperties.getTokenName(), token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("页码必须从 1 开始"));
+    }
+
+    @Test
+    @DisplayName("12. pageSize=-5：业务错误码，而不是 total=0 的自相矛盾响应")
+    void negativePageSizeShouldFail() throws Exception {
+        mockMvc.perform(get("/emps").param("pageSize", "-5").header(jwtProperties.getTokenName(), token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("每页条数至少为 1"));
+    }
+
+    @Test
+    @DisplayName("13. page 传空值（?page=）：按默认第 1 页处理，不崩")
+    void emptyPageParamShouldFallBackToDefault() throws Exception {
+        JsonNode page = query("page", "");
+
+        System.out.println("\n[13] ?page= 空值 = total:" + page.path("total")
+                + "，rows:" + page.path("rows").size());
+        assertEquals(15, page.path("total").asInt());
+        assertEquals(10, page.path("rows").size(), "空页码应该按默认 pageSize 返回第 1 页");
+    }
+
+    // ------------------------------------------------------------------
     //  测试自己的小工具
     // ------------------------------------------------------------------
 

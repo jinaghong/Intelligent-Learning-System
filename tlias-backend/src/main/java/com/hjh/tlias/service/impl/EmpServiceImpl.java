@@ -10,6 +10,7 @@ import com.hjh.tlias.dto.EmpExperienceDTO;
 import com.hjh.tlias.dto.EmpQueryDTO;
 import com.hjh.tlias.entity.Emp;
 import com.hjh.tlias.entity.EmpExperience;
+import com.hjh.tlias.mapper.DeptMapper;
 import com.hjh.tlias.mapper.EmpExperienceMapper;
 import com.hjh.tlias.mapper.EmpMapper;
 import com.hjh.tlias.service.EmpService;
@@ -30,6 +31,13 @@ public class EmpServiceImpl implements EmpService {
     private final EmpMapper empMapper;
     private final EmpExperienceMapper empExperienceMapper;
 
+    /**
+     * 新增 / 修改员工前要确认 deptId 指向真实存在的部门。
+     * 和 DeptServiceImpl 里用 EmpMapper 数员工是同一个道理：
+     * 「员工挂到哪个部门」本来就是一条跨两张表的业务规则。
+     */
+    private final DeptMapper deptMapper;
+
     /** 新增 / 改密码时都要用它把明文转成 BCrypt 密文，绝不能把明文存进库 */
     private final PasswordEncoder passwordEncoder;
 
@@ -39,12 +47,18 @@ public class EmpServiceImpl implements EmpService {
 
     @Override
     public PageResult<EmpVO> page(EmpQueryDTO query) {
+        // 绑定层有个坑：显式传空值的参数（?page=）会把字段覆盖成 null，
+        // 连类里的默认值都保不住。这里兜一下：空值一律按「没传」处理。
+        // （0 和负数走不到这里——EmpQueryDTO 上的 @Min(1) 已经把它们拦成业务错误码了）
+        long current = query.getPage() == null ? 1 : query.getPage();
+        long size = query.getPageSize() == null ? 10 : query.getPageSize();
+
         // Page 是 IPage 的实现类，两个参数是「第几页」和「每页几条」。
         // 它本身只是个空壳子——真正干活的是分页插件，它会：
         //   1. 把 LIMIT 塞进我们的 SQL 里查这一页
         //   2. 另跑一条 COUNT 查总数
         //   3. 把两个结果都写回这个 page 对象
-        Page<EmpVO> page = new Page<>(query.getPage(), query.getPageSize());
+        Page<EmpVO> page = new Page<>(current, size);
 
         IPage<EmpVO> result = empMapper.selectPageWithDept(page, query);
         return PageResult.from(result);
@@ -87,6 +101,10 @@ public class EmpServiceImpl implements EmpService {
         if (empDTO.getPassword() == null || empDTO.getPassword().isBlank()) {
             throw new BusinessException("密码不能为空");
         }
+        // 部门可以不选（dept_id 允许 null），但选了就必须真实存在。
+        // 不查的话坏 deptId 会撞外键报 DataIntegrityViolationException，
+        // 掉进兜底分支只显示「系统繁忙」，用户看不懂
+        ensureDeptExists(empDTO.getDeptId());
 
         Emp emp = new Emp();
         emp.setUsername(empDTO.getUsername());
@@ -122,6 +140,11 @@ public class EmpServiceImpl implements EmpService {
     @Override
     @Transactional
     public void update(EmpDTO empDTO) {
+        // id 是「改哪一行」的定位符，缺了它必须先拦下：selectById(null) 会返回 null，
+        // 让人误以为问题是「员工不存在」，其实请求本身就没给 id
+        if (empDTO.getId() == null) {
+            throw new BusinessException("员工 id 不能为空");
+        }
         if (empMapper.selectById(empDTO.getId()) == null) {
             throw new BusinessException("员工不存在");
         }
@@ -132,6 +155,7 @@ public class EmpServiceImpl implements EmpService {
                 .ne(Emp::getId, empDTO.getId())) > 0) {
             throw new BusinessException("用户名已存在");
         }
+        ensureDeptExists(empDTO.getDeptId());
 
         Emp emp = new Emp();
         emp.setId(empDTO.getId());
@@ -153,7 +177,12 @@ public class EmpServiceImpl implements EmpService {
         }
 
         empMapper.updateById(emp);
-        replaceExperiences(empDTO.getId(), empDTO.getExprList());
+        // 工作经历三态语义：不传（null）= 不动；传空列表 = 清空；传非空 = 整体替换。
+        // 这里必须显式判 null——replaceExperiences 是「先删后插」，
+        // 直接对 null 调用会把老经历全删掉，而且一次错都不报
+        if (empDTO.getExprList() != null) {
+            replaceExperiences(empDTO.getId(), empDTO.getExprList());
+        }
     }
 
     // ------------------------------------------------------------------
@@ -234,6 +263,23 @@ public class EmpServiceImpl implements EmpService {
             case 5 -> "咨询师";
             default -> "未知职位(" + job + ")";
         };
+    }
+
+    // ------------------------------------------------------------------
+    //  私有工具：校验
+    // ------------------------------------------------------------------
+
+    /**
+     * deptId 可以不传（该员工暂时不属于任何部门），但传了就必须是真实存在的部门。
+     *
+     * 为什么不靠外键兜底：外键拦下来抛的是 DataIntegrityViolationException，
+     * 掉进全局异常的兜底分支显示「系统繁忙」；手动查一次才能给「部门不存在」。
+     * 和 P3 删部门前手动数员工是同一个思路——数据库约束保数据完整，业务校验保用户能看懂。
+     */
+    private void ensureDeptExists(Long deptId) {
+        if (deptId != null && deptMapper.selectById(deptId) == null) {
+            throw new BusinessException("部门不存在");
+        }
     }
 
     // ------------------------------------------------------------------

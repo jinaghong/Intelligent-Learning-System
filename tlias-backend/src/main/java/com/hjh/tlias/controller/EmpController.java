@@ -41,10 +41,13 @@ public class EmpController {
      * 注意参数上没有 @RequestBody —— 这是 GET，条件全在 URL 的查询串里
      * （?name=李&gender=1&page=2）。Spring 会把查询串里同名的参数逐个
      * 塞进 EmpQueryDTO 的字段，一个都不传也没关系，DTO 里都有默认值。
+     *
+     * 参数上的 @Valid 必须写：它才会触发 DTO 里的 @Min(1) 等校验注解，
+     * 把 page=0、pageSize=-5 这类参数拦成业务错误码。不写的话注解只是摆设。
      */
     @GetMapping
     @Operation(summary = "条件分页查询员工")
-    public Result<PageResult<EmpVO>> page(EmpQueryDTO query) {
+    public Result<PageResult<EmpVO>> page(@Valid EmpQueryDTO query) {
         return Result.success(empService.page(query));
     }
 
