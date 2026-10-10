@@ -10,6 +10,16 @@ spring:
     # 该文件现在还不存在，Spring Boot 对「profile 激活了但没有对应文件」不报错。
     group:
       dev: local
+  servlet:
+    multipart:
+      # 单个上传文件的大小上限。超了会在解析阶段被拒，
+      # 提示语由 GlobalExceptionHandler 里对应的处理器给出
+      #
+      # 只设 max-file-size，不设 max-request-size：后者是「整个请求体」的上限，
+      # 里面除了文件还有表单边界等包装字节——如果也卡成 2MB，
+      # 一个刚好 2MB 的文件会因为包装开销超一点点而被误拒，很难排查。
+      # 保持它的默认值 10MB 就好
+      max-file-size: 2MB
 
 server:
   port: 8080

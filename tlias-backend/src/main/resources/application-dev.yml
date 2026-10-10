@@ -48,6 +48,17 @@ tlias:
     ttl-millis: 43200000
     secret-key: ${JWT_SECRET:}
 
+# 文件存储（P1b）。
+# 默认（没激活 oss profile）走 LocalFileStorageServiceImpl，这两项生效：
+storage:
+  local:
+    # 文件落盘目录。相对路径时相对于「启动进程的工作目录」，
+    # 正常在 tlias-backend 下启动，就会落在项目根的 uploads/（已被 .gitignore 排除）
+    dir: uploads
+    # 拼返回给前端的 URL 用。必须带 context-path（/api），
+    # 因为返回的是要能直接访问的完整地址
+    base-url: http://localhost:8080/api
+
 logging:
   level:
     # 自己的包开 debug。这一行同时让 MyBatis 把执行的 SQL 打印出来，

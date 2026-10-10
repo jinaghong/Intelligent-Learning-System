@@ -28,6 +28,7 @@
         <!-- 0.12.x 线里最新的一个。0.13.0 也已发布，但本方案按文档锁定在 0.12.x -->
         <jjwt.version>0.12.7</jjwt.version>
         <easyexcel.version>3.3.4</easyexcel.version>
+        <aliyun-oss.version>3.18.5</aliyun-oss.version>
     </properties>
 
     <dependencies>
@@ -128,6 +129,37 @@
             <groupId>com.alibaba</groupId>
             <artifactId>easyexcel</artifactId>
             <version>${easyexcel.version}</version>
+        </dependency>
+
+        <!-- 本地缓存库。CacheService 的默认实现就建在它上面，
+             用来存「放几秒到几十分钟」的小数据（验证码、图形验证码答案这类）。
+             版本由 spring-boot-starter-parent 托管，不写 <version> -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- Redis 客户端（底层是 Lettuce）。这里只是把「将来要用」的依赖和实现类备好：
+             默认 profile（dev）下 CacheService 装配的是 Caffeine 实现，
+             这个 starter 虽然会把 RedisTemplate 等 bean 备好，但第一次真正用之前
+             不会和任何 Redis 服务器建连接，所以本地不装 Redis 也不会启动失败。
+             等部署了 Redis，启动时把激活 profile 换成 redis 才会切到 Redis 实现 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- 阿里云 OSS 对象存储 SDK（V1 版，阿里官方文档的主线）。
+             用途：FileStorageService 的第二个实现——头像等文件传到 OSS 后拿公网 URL。
+             默认 profile（dev）下不会被启用，走本地磁盘实现；
+             要真连 OSS 时把激活 profile 换成 dev,oss 切换。
+             3.18.5 是 dependency:get 实测存在的版本。
+             另外实测过它的 class 文件不引用 javax.xml.bind / javax.activation，
+             所以 JDK 9+ 从内置模块里移走 JAXB 这件事不影响它，无需补依赖 -->
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>${aliyun-oss.version}</version>
         </dependency>
 
         <dependency>
