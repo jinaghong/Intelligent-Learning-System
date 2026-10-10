@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  namespace 必须写成 Mapper 接口的全限定名。
+  MyBatis 靠它把这里的 SQL 和 Java 接口绑起来，写错一个字就报
+  "Invalid bound statement (not found)"。
+-->
+<mapper namespace="com.hjh.tlias.mapper.EmpMapper">
+
+    <!--
+      <sql> 是一段可复用的 SQL 片段。下面两个片段被三个查询共用，
+      抄三份的话将来加个筛选条件就得改三个地方，漏一个就出 bug。
+
+      每列都显式写出来、不用 SELECT *：
+        - 显式列名让读代码的人一眼看到查了什么
+        - 加字段时不会因为 SELECT * 而「悄悄多查了一列」
+        - 换列顺序、加计算列时也不受影响
+
+      <include refid="xxx"/> 就是把它插到用它的地方。
+    -->
+    <sql id="baseColumns">
+        e.id,
+        e.username,
+        e.name,
+        e.gender,
+        e.image,
+        e.job,
+        e.entry_date,
+        e.dept_id,
+        e.status,
+        e.create_time,
+        e.update_time,
+        d.name AS dept_name
+    </sql>
+
+    <!--
+      筛选条件。分页查询、导出查询都要用同一套条件，所以抽出来。
+      里面的 #{q.xxx} 取的是 @Param("q") 那个参数对象的属性。
+    -->
+    <sql id="queryConditions">
+        <where>
+            <!--
+              <where> 标签做两件事：只有当里面至少有一个条件成立时才拼出 WHERE 关键字，
+              并且会自动吃掉紧跟在后面的第一个 AND。没有它就得写
+              WHERE 1=1 这种凑数条件。
+            -->
+            <if test="q.name != null and q.name != ''">
+                AND e.name LIKE CONCAT('%', #{q.name}, '%')
+            </if>
+            <if test="q.gender != null">
+                AND e.gender = #{q.gender}
+            </if>
+            <if test="q.begin != null">
+                <!-- XML 里 < 和 > 是标签符号，必须写成实体 &lt; &gt; -->
+                AND e.entry_date &gt;= #{q.begin}
+            </if>
+            <if test="q.end != null">
+                AND e.entry_date &lt;= #{q.end}
+            </if>
+        </where>
+    </sql>
+
+    <!--
+      id 必须和接口里的方法名一模一样。
+
+      resultType 直接写 VO 的全限定名：查出来的列名先按
+      map-underscore-to-camel-case 转成驼峰，再往 VO 的同名属性上填。
+      所以 entry_date -> entryDate 是自动的，而 dept_name 这个别名
+      也会被转成 deptName —— 正好对上 EmpVO 里的字段。
+    -->
+    <select id="selectPageWithDept" resultType="com.hjh.tlias.vo.EmpVO">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM emp e
+        <!--
+          这里必须是 LEFT JOIN，不能图省事写成 JOIN（也就是 INNER JOIN）。
+
+          INNER JOIN 只保留「两边都能配上」的行，dept_id 为 null 的员工会被
+          直接从列表里抹掉 —— 数据没丢，但你在页面上再也看不到他，这类 bug
+          非常难查。LEFT JOIN 保留左表（emp）的全部行，配不上时 dept_name 为 null。
+        -->
+        LEFT JOIN dept d ON d.id = e.dept_id
+        <include refid="queryConditions"/>
+        <!--
+          必须写 ORDER BY。SQL 不写排序时，MySQL 返回的顺序「碰巧」是按主键，
+          但那是实现细节不是承诺——加了索引、改了执行计划，顺序就可能变。
+          分页尤其致命：没有稳定排序，第 2 页可能重复第 1 页的数据。
+        -->
+        ORDER BY e.id
+    </select>
+
+    <!--
+      导出用的查询：和分页查询的差别只有两点 —— 返回 List（不分页）、不写 LIMIT。
+
+      ⚠️ 这条 SQL 会把符合条件的**全部**数据一次性读进内存。
+      现在员工才十几个，无所谓；真到了几十万行，就得改成分批查（MyBatis 的
+      ResultHandler 或按 id 游标翻页），否则一次导出能把内存吃光。
+      这是「导出」功能最常见的生产事故，先记住这个点。
+    -->
+    <select id="selectListWithDept" resultType="com.hjh.tlias.vo.EmpVO">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM emp e
+        LEFT JOIN dept d ON d.id = e.dept_id
+        <include refid="queryConditions"/>
+        ORDER BY e.id
+    </select>
+
+    <!--
+      详情查询：同样的列和 JOIN，只是条件换成主键。
+      resultType 换成 EmpDetailVO，它比 EmpVO 多一个 exprList 字段，
+      而 SQL 里没有这一列 —— MyBatis 不会去管它，留 null，
+      由 Service 再查一次填上。
+    -->
+    <select id="selectDetailById" resultType="com.hjh.tlias.vo.EmpDetailVO">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM emp e
+        LEFT JOIN dept d ON d.id = e.dept_id
+        WHERE e.id = #{id}
+    </select>
+
+</mapper>

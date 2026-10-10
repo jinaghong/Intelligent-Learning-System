@@ -21,6 +21,12 @@ spring:
     password: ${DB_PASSWORD:}
 
 mybatis-plus:
+  # XML mapper 文件的存放位置。
+  #   classpath*:  开头的星号表示「连 jar 包里的也一起扫」，不加就只扫本项目
+  #   **           匹配任意层目录
+  # MyBatis-Plus 的默认值本来就是 classpath*:/mapper/**/*.xml，这里显式写出来，
+  # 是为了以后想换目录时不用先去翻文档猜默认值是什么
+  mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
     # 数据库列 user_name 自动映射到 Java 属性 userName，
     # 不用给每个字段写 @TableField("user_name")
