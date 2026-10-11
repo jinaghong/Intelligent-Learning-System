@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hjh.tlias.mapper.ClazzMapper">
+
+    <!--
+      列清单 + 班主任姓名。三个查询共用，改一处生效三处。
+      master_name 的别名会被 map-underscore-to-camel-case 转成 masterName，
+      正好对上 ClazzVO 的字段。
+    -->
+    <sql id="baseColumns">
+        c.id,
+        c.name,
+        c.room,
+        c.begin_date,
+        c.end_date,
+        c.master_id,
+        c.subject,
+        c.status,
+        c.create_time,
+        c.update_time,
+        m.name AS master_name
+    </sql>
+
+    <!-- 筛选条件：名称模糊 + 开班日期区间。空条件自动省略（<where> 的功劳） -->
+    <sql id="queryConditions">
+        <where>
+            <if test="q.name != null and q.name != ''">
+                AND c.name LIKE CONCAT('%', #{q.name}, '%')
+            </if>
+            <if test="q.begin != null">
+                AND c.begin_date &gt;= #{q.begin}
+            </if>
+            <if test="q.end != null">
+                AND c.begin_date &lt;= #{q.end}
+            </if>
+        </where>
+    </sql>
+
+    <!--
+      必须是 LEFT JOIN：master_id 为 null 的班级（暂时没班主任）不能从列表里消失。
+      配不上 emp 时 master_name 为 null，VO 里留空——前端显示「未分配」由它自己决定。
+    -->
+    <select id="selectPageWithMaster" resultType="com.hjh.tlias.vo.ClazzVO">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM clazz c
+        LEFT JOIN emp m ON m.id = c.master_id
+        <include refid="queryConditions"/>
+        ORDER BY c.id
+    </select>
+
+    <select id="selectAllWithMaster" resultType="com.hjh.tlias.vo.ClazzVO">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM clazz c
+        LEFT JOIN emp m ON m.id = c.master_id
+        ORDER BY c.id
+    </select>
+
+    <select id="selectDetailById" resultType="com.hjh.tlias.vo.ClazzVO">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM clazz c
+        LEFT JOIN emp m ON m.id = c.master_id
+        WHERE c.id = #{id}
+    </select>
+
+</mapper>

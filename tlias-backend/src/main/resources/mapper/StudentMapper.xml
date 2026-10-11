@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hjh.tlias.mapper.StudentMapper">
+
+    <!--
+      列表列清单：只包含列表页要展示的列（不含 id_card / address 等隐私字段），
+      外加 LEFT JOIN clazz 带出来的 clazz_name。
+    -->
+    <sql id="listColumns">
+        s.id,
+        s.name,
+        s.no,
+        s.gender,
+        s.phone,
+        s.degree,
+        s.clazz_id,
+        s.is_college,
+        s.violation_count,
+        s.violation_score,
+        s.create_time,
+        s.update_time,
+        c.name AS clazz_name
+    </sql>
+
+    <!-- 详情列清单：比列表多几个回显用的字段 -->
+    <sql id="detailColumns">
+        s.id,
+        s.name,
+        s.no,
+        s.gender,
+        s.phone,
+        s.degree,
+        s.clazz_id,
+        s.id_card,
+        s.is_college,
+        s.address,
+        s.graduation_date,
+        s.violation_count,
+        s.violation_score,
+        s.create_time,
+        s.update_time,
+        c.name AS clazz_name
+    </sql>
+
+    <!-- 筛选条件：姓名模糊 + 学历精确 + 班级精确，空条件自动省略 -->
+    <sql id="queryConditions">
+        <where>
+            <if test="q.name != null and q.name != ''">
+                AND s.name LIKE CONCAT('%', #{q.name}, '%')
+            </if>
+            <if test="q.degree != null">
+                AND s.degree = #{q.degree}
+            </if>
+            <if test="q.clazzId != null">
+                AND s.clazz_id = #{q.clazzId}
+            </if>
+        </where>
+    </sql>
+
+    <!--
+      LEFT JOIN 不是 INNER JOIN：没分班的学员（clazz_id 为 null）不能被列表抹掉。
+      这条和员工列表的 dept JOIN 是同一个坑——数据没丢但界面上看不见，最难查。
+    -->
+    <select id="selectPageWithClazz" resultType="com.hjh.tlias.vo.StudentVO">
+        SELECT
+        <include refid="listColumns"/>
+        FROM student s
+        LEFT JOIN clazz c ON c.id = s.clazz_id
+        <include refid="queryConditions"/>
+        ORDER BY s.id
+    </select>
+
+    <select id="selectDetailById" resultType="com.hjh.tlias.vo.StudentDetailVO">
+        SELECT
+        <include refid="detailColumns"/>
+        FROM student s
+        LEFT JOIN clazz c ON c.id = s.clazz_id
+        WHERE s.id = #{id}
+    </select>
+
+</mapper>
