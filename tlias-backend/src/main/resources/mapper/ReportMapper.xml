@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hjh.tlias.mapper.ReportMapper">
+
+    <!--
+      班级人数：以 clazz 为基准 LEFT JOIN，空班级以 0 出现（P4 老教训：不许丢行）。
+      SUM(条件) 是 MySQL 的写法：条件为真算 1、为假算 0，正好当计数器用；
+      空班级时 SUM 是 NULL，用 COALESCE 兜 0。
+    -->
+    <select id="clazzStudentCount" resultType="com.hjh.tlias.vo.ClazzStudentCountVO">
+        SELECT c.name                          AS clazzName,
+               COUNT(s.id)                     AS total,
+               COALESCE(SUM(s.gender = 1), 0)  AS maleCount,
+               COALESCE(SUM(s.gender = 2), 0)  AS femaleCount
+        FROM clazz c
+                 LEFT JOIN student s ON s.clazz_id = c.id
+        GROUP BY c.id
+        ORDER BY c.id
+    </select>
+
+    <!-- 学历分布：只出「编码 + 数量」，中文名与缺失补 0 由 Service 层做 -->
+    <select id="studentDegree" resultType="com.hjh.tlias.vo.StudentDegreeVO">
+        SELECT degree, COUNT(*) AS count
+        FROM student
+        GROUP BY degree
+        ORDER BY degree
+    </select>
+
+    <!-- 性别分布：同上 -->
+    <select id="studentGender" resultType="com.hjh.tlias.vo.StudentGenderVO">
+        SELECT gender, COUNT(*) AS count
+        FROM student
+        GROUP BY gender
+        ORDER BY gender
+    </select>
+
+    <!--
+      课程成绩：以 course 为基准 LEFT JOIN，无成绩的课程 COUNT=0、
+      AVG/MAX/MIN 为 NULL（行保留，前端自行决定怎么展示）。
+      及格率 = 及格人次(分数 >= 60) / 考试人次 × 100，保留 1 位小数；
+      注意：SQL 里的 >= 在 XML 中必须转义成 &gt;= 。
+    -->
+    <select id="courseScore" resultType="com.hjh.tlias.vo.CourseScoreVO">
+        SELECT co.name                                        AS courseName,
+               COUNT(ss.id)                                   AS examCount,
+               ROUND(AVG(ss.score), 2)                        AS avgScore,
+               MAX(ss.score)                                  AS maxScore,
+               MIN(ss.score)                                  AS minScore,
+               ROUND(SUM(ss.score &gt;= 60) * 100.0 / COUNT(ss.id), 1) AS passRate
+        FROM course co
+                 LEFT JOIN student_score ss ON ss.course_id = co.id
+        GROUP BY co.id
+        ORDER BY co.id
+    </select>
+
+    <!-- 分数段：固定 5 桶；range 是 MySQL 关键字，加反引号做防御性包裹 -->
+    <select id="scoreDistribution" resultType="com.hjh.tlias.vo.ScoreDistributionVO">
+        SELECT CASE
+                   WHEN score &gt;= 90 THEN '90-100'
+                   WHEN score &gt;= 80 THEN '80-89'
+                   WHEN score &gt;= 70 THEN '70-79'
+                   WHEN score &gt;= 60 THEN '60-69'
+                   ELSE '0-59'
+                   END  AS `range`,
+               COUNT(*) AS count
+        FROM student_score
+        GROUP BY `range`
+    </select>
+
+    <!-- 班级违纪：双 LEFT JOIN 链；无违纪班级 COUNT=0、SUM 为 NULL → COALESCE 兜 0 -->
+    <select id="clazzViolation" resultType="com.hjh.tlias.vo.ClazzViolationVO">
+        SELECT c.name                    AS clazzName,
+               COUNT(v.id)               AS violationCount,
+               COALESCE(SUM(v.point), 0) AS totalPoints
+        FROM clazz c
+                 LEFT JOIN student s ON s.clazz_id = c.id
+                 LEFT JOIN student_violation v ON v.student_id = s.id
+        GROUP BY c.id
+        ORDER BY c.id
+    </select>
+
+    <!--
+      违纪 Top10：直接用 student 的汇总字段，稳定排序三键
+      （扣分降序 → 次数降序 → id 升序），并列时不抖动。
+    -->
+    <select id="violationTop" resultType="com.hjh.tlias.vo.ViolationTopVO">
+        SELECT s.name            AS studentName,
+               c.name            AS clazzName,
+               s.violation_count AS violationCount,
+               s.violation_score AS violationScore
+        FROM student s
+                 LEFT JOIN clazz c ON s.clazz_id = c.id
+        WHERE s.violation_count &gt; 0
+        ORDER BY s.violation_score DESC, s.violation_count DESC, s.id ASC
+        LIMIT 10
+    </select>
+
+    <!-- 部门人数：以 dept 为基准；0 人部门以 0 出现 -->
+    <select id="deptEmpCount" resultType="com.hjh.tlias.vo.DeptEmpCountVO">
+        SELECT d.name                          AS deptName,
+               COUNT(e.id)                     AS total,
+               COALESCE(SUM(e.status = 1), 0)  AS activeCount,
+               COALESCE(SUM(e.status = 2), 0)  AS inactiveCount
+        FROM dept d
+                 LEFT JOIN emp e ON e.dept_id = d.id
+        GROUP BY d.id
+        ORDER BY d.id
+    </select>
+
+</mapper>
