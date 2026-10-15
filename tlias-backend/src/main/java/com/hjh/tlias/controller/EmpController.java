@@ -1,5 +1,6 @@
 package com.hjh.tlias.controller;
 
+import com.hjh.tlias.annotation.Log;
 import com.hjh.tlias.common.result.PageResult;
 import com.hjh.tlias.common.result.Result;
 import com.hjh.tlias.dto.EmpDTO;
@@ -57,6 +58,7 @@ public class EmpController {
         return Result.success(empService.getDetailById(id));
     }
 
+    @Log
     @PostMapping
     @Operation(summary = "新增员工")
     public Result<Void> save(@Valid @RequestBody EmpDTO empDTO) {
@@ -64,6 +66,7 @@ public class EmpController {
         return Result.success();
     }
 
+    @Log
     @PutMapping
     @Operation(summary = "修改员工")
     public Result<Void> update(@Valid @RequestBody EmpDTO empDTO) {
@@ -79,6 +82,7 @@ public class EmpController {
      * 会掉进兜底分支变成「系统繁忙，请稍后重试」。
      * 交给 Service 判断，才能给出「请选择要删除的员工」这种能看懂的话。
      */
+    @Log
     @DeleteMapping
     @Operation(summary = "批量删除员工")
     public Result<Void> delete(@RequestParam(name = "ids", required = false) List<Long> ids) {

@@ -1,5 +1,6 @@
 package com.hjh.tlias.controller;
 
+import com.hjh.tlias.annotation.Log;
 import com.hjh.tlias.common.exception.BusinessException;
 import com.hjh.tlias.common.result.Result;
 import com.hjh.tlias.storage.FileStorageService;
@@ -40,6 +41,9 @@ public class UploadController {
      * 如果写 required = true，缺失时 Spring 会抛 MissingServletRequestPartException，
      * 前端收到的会是「系统繁忙」——用户只是忘了选文件，不该得到服务器故障的提示。
      */
+    // 上传也记日志，但切面的 serializeArgs 会跳过 MultipartFile——
+    // 否则整个文件的字节都会被序列化进 oper_log.method_params
+    @Log
     @PostMapping("/upload")
     public Result<String> upload(@RequestParam(value = "file", required = false) MultipartFile file) throws IOException {
         if (file == null) {

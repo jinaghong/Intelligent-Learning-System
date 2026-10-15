@@ -1,5 +1,6 @@
 package com.hjh.tlias.controller;
 
+import com.hjh.tlias.annotation.Log;
 import com.hjh.tlias.common.result.Result;
 import com.hjh.tlias.dto.LoginDTO;
 import com.hjh.tlias.entity.Emp;
@@ -20,6 +21,9 @@ public class LoginController {
 
     private final LoginService loginService;
 
+    // 登录成功失败都记：失败日志带 IP，是「有人在爆破密码」的第一手证据。
+    // 注意此时 emp_id 必为 NULL——登录这个接口本来就是「还没有身份」的人在调
+    @Log
     @PostMapping("/login")
     @Operation(summary = "员工登录")
     public Result<LoginVO> login(@RequestBody LoginDTO loginDTO) {

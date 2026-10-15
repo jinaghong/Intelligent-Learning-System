@@ -1,5 +1,6 @@
 package com.hjh.tlias.controller;
 
+import com.hjh.tlias.annotation.Log;
 import com.hjh.tlias.common.result.Result;
 import com.hjh.tlias.dto.DeptDTO;
 import com.hjh.tlias.entity.Dept;
@@ -51,6 +52,7 @@ public class DeptController {
         return Result.success(deptService.getById(id));
     }
 
+    @Log
     @PostMapping
     @Operation(summary = "新增部门")
     // @Valid 必须写：DTO 上的 @NotBlank 只是「声明了规则」，
@@ -62,6 +64,7 @@ public class DeptController {
         return Result.success();
     }
 
+    @Log
     @PutMapping
     @Operation(summary = "修改部门")
     public Result<Void> update(@Valid @RequestBody DeptDTO deptDTO) {
@@ -69,6 +72,7 @@ public class DeptController {
         return Result.success();
     }
 
+    @Log
     @DeleteMapping("/{id}")
     @Operation(summary = "删除部门")
     public Result<Void> delete(@PathVariable("id") Long id) {

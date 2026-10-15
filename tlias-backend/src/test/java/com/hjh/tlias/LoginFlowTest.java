@@ -15,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -37,9 +38,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * 用 MockMvc 而不是真实发 HTTP 请求，好处是不占用 8080 端口、跑得更快，
  * 而且可以在同一个 JVM 里直接从上下文里取 Bean。
+ *
+ * @Transactional 是 P7 补上的：登录接口从 P7 起会写 oper_log（操作日志），
+ * 不加事务的话这些日志行会真的提交进库，DbSmokeTest 的「oper_log 期望 0 行」
+ * 就会被弄脏。加上后每个用例跑完回滚，日志行也随之消失。
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class LoginFlowTest {
 
     /** 种子数据里已有的员工，密码是 123456 */

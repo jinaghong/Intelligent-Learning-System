@@ -1,5 +1,6 @@
 package com.hjh.tlias.controller;
 
+import com.hjh.tlias.annotation.Log;
 import com.hjh.tlias.common.result.Result;
 import com.hjh.tlias.dto.CourseDTO;
 import com.hjh.tlias.entity.Course;
@@ -43,6 +44,7 @@ public class CourseController {
         return Result.success(courseService.getById(id));
     }
 
+    @Log
     @PostMapping
     @Operation(summary = "新增课程")
     public Result<Void> save(@Valid @RequestBody CourseDTO courseDTO) {
@@ -50,6 +52,7 @@ public class CourseController {
         return Result.success();
     }
 
+    @Log
     @PutMapping
     @Operation(summary = "修改课程")
     public Result<Void> update(@Valid @RequestBody CourseDTO courseDTO) {
@@ -57,6 +60,7 @@ public class CourseController {
         return Result.success();
     }
 
+    @Log
     @DeleteMapping("/{id}")
     @Operation(summary = "删除课程")
     public Result<Void> delete(@PathVariable("id") Long id) {

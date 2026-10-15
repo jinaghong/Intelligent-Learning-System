@@ -201,7 +201,7 @@ CREATE TABLE student_score (
   COLLATE = utf8mb4_0900_ai_ci COMMENT ='学员成绩表';
 
 -- ---------------------------------------------------------------------------
--- 9. oper_log 操作日志（由 AOP 切面在 P7 阶段异步写入）
+-- 9. oper_log 操作日志（由 AOP 切面在 P7 阶段同步写入；异步方案见计划书-P7 的偏差说明）
 --    刻意不建外键指向 emp：审计日志必须在当事人被删除后依然留存
 -- ---------------------------------------------------------------------------
 CREATE TABLE oper_log (
@@ -221,7 +221,7 @@ CREATE TABLE oper_log (
     KEY idx_log_emp (emp_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci COMMENT ='操作日志表（AOP 异步落库）';
+  COLLATE = utf8mb4_0900_ai_ci COMMENT ='操作日志表（AOP 同步落库）';
 
 -- ---------------------------------------------------------------------------
 -- 10. ai_call_log AI 调用日志（可观测性 + 降级判据 + token 计费审计）

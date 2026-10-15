@@ -1,5 +1,6 @@
 package com.hjh.tlias.controller;
 
+import com.hjh.tlias.annotation.Log;
 import com.hjh.tlias.common.result.PageResult;
 import com.hjh.tlias.common.result.Result;
 import com.hjh.tlias.dto.StudentDTO;
@@ -47,6 +48,7 @@ public class StudentController {
         return Result.success(studentService.getDetailById(id));
     }
 
+    @Log
     @PostMapping
     @Operation(summary = "新增学员")
     public Result<Void> save(@Valid @RequestBody StudentDTO studentDTO) {
@@ -54,6 +56,7 @@ public class StudentController {
         return Result.success();
     }
 
+    @Log
     @PutMapping
     @Operation(summary = "修改学员")
     public Result<Void> update(@Valid @RequestBody StudentDTO studentDTO) {
@@ -62,6 +65,7 @@ public class StudentController {
     }
 
     /** 批量删除，id 用逗号分隔：DELETE /api/students?ids=1,2,3 */
+    @Log
     @DeleteMapping
     @Operation(summary = "批量删除学员")
     public Result<Void> delete(@RequestParam(name = "ids", required = false) List<Long> ids) {
@@ -73,6 +77,7 @@ public class StudentController {
      * 违纪处理：给学员记一笔违纪（扣分）。
      * 明细插入和汇总字段累加在同一个事务里，由 Service 保证。
      */
+    @Log
     @PostMapping("/violation")
     @Operation(summary = "违纪处理（记违纪 + 累加汇总）")
     public Result<Void> addViolation(@Valid @RequestBody ViolationDTO violationDTO) {

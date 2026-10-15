@@ -1,5 +1,6 @@
 package com.hjh.tlias.controller;
 
+import com.hjh.tlias.annotation.Log;
 import com.hjh.tlias.common.result.PageResult;
 import com.hjh.tlias.common.result.Result;
 import com.hjh.tlias.dto.ClazzDTO;
@@ -55,6 +56,7 @@ public class ClazzController {
         return Result.success(clazzService.getById(id));
     }
 
+    @Log
     @PostMapping
     @Operation(summary = "新增班级")
     public Result<Void> save(@Valid @RequestBody ClazzDTO clazzDTO) {
@@ -62,6 +64,7 @@ public class ClazzController {
         return Result.success();
     }
 
+    @Log
     @PutMapping
     @Operation(summary = "修改班级")
     public Result<Void> update(@Valid @RequestBody ClazzDTO clazzDTO) {
@@ -69,6 +72,7 @@ public class ClazzController {
         return Result.success();
     }
 
+    @Log
     @DeleteMapping("/{id}")
     @Operation(summary = "删除班级")
     public Result<Void> delete(@PathVariable("id") Long id) {
