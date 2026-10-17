@@ -174,6 +174,10 @@ test/AiFallbackTest.java    降级路径（批次三，~5 条，@SpringBootTest 
    mysql 直查 `ai_call_log` 对账 → 收尾 DELETE 清回 0 行 → 再跑 DbSmokeTest 确认
 - （待 key）真 key 到位后：curl 验证 DeepSeek 模型名 → 更新
   `application-deepseek.yml` → `dev,deepseek` 真调用 E2E → 文档补证据
+  - ✅ **2026-10-17 完成**：`/v1/models` 实测仅 `deepseek-flash` / `deepseek-v4-pro` →
+    定稿 `deepseek-flash` → 真调用 E2E：建议 status=1（161+820 tokens，5.5s）、
+    出题 status=1（118+873 tokens，5.5s，3 题 JSON 全部解析成功）；
+    首次因 base-url 带 `/v1` 报 404，降级路径真实触发且记账正确（status=0）
 
 ---
 
@@ -181,8 +185,9 @@ test/AiFallbackTest.java    降级路径（批次三，~5 条，@SpringBootTest 
 
 | 风险 | 处理 |
 |---|---|
-| DeepSeek 模型名存疑（`deepseek-chat` / `deepseek-flash` / `deepseek-v4-pro` 三说并存） | **真 key 到位后第一件事 curl 验证**；Mock 阶段不受影响 |
-| Spring AI 1.1.8 × Boot 3.5.16 兼容性 | 构建 + 启动探针实测；自动配置禁用方式（`spring.ai.model.chat=none` 全局开关 vs `spring.ai.openai.chat.enabled=false` 逐项开关）以实测为准 |
+| DeepSeek 模型名存疑（三说并存） | ✅ **2026-10-17 真 key 实测**：平台只有 `deepseek-flash`（V4.1-Flash）/ `deepseek-v4-pro`（V4-Pro），`deepseek-chat` 已退役——原方案文档是对的；已定稿 `deepseek-flash` |
+| Spring AI 的 base-url 不能带 `/v1`（会被拼成 `/v1/v1` → 404） | ✅ 已实测修正：base-url 只写 `https://api.deepseek.com`（踩坑 #16） |
+| Spring AI 1.1.8 × Boot 3.5.16 兼容性 | ✅ 实测通过：编译、启动、真实调用全链路正常 |
 | 无 key 时启动失败 | 默认 profile 禁用 Spring AI 自动配置（不发请求就不校验 key）；`deepseek` profile 才启用 |
 | Mock 返回的 token 数 | 固定 0/0（没有真实计费）；测试对 Mock 断言 0，DeepSeek 返回真实 usage |
 | 出题 JSON 稳定性 | prompt 约束 + 围栏剥离 + 降级兜底三保险；跨模型漂移是已知局限（面试点） |
