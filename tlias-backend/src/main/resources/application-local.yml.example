@@ -13,11 +13,15 @@ spring:
     # P1 接入 MyBatis-Plus 后开始生效。填 MySQL 的 root 密码。
     password: "填你的MySQL密码"
 
-ai:
-  deepseek:
-    # P8 阶段（AI 增强）才需要。没有 key 时 AiAssistantService 会自动
-    # 走规则降级实现，接口不会 500，所以前期完全可以不填。
-    api-key: "填sk开头的密钥"
+  ai:
+    openai:
+      # P8 阶段（AI 增强）才需要。填 DeepSeek 平台申请的 sk- 开头密钥——
+      # DeepSeek 提供 OpenAI 兼容协议，所以键挂名在 openai 下（base-url 已在
+      # application-deepseek.yml 里指到 api.deepseek.com）。
+      # 也可以不写这里，改设环境变量 DEEPSEEK_API_KEY（优先级更高）。
+      # 注意：真调用还要激活 deepseek profile（--spring.profiles.active=dev,deepseek）；
+      # 不激活时走 Mock 实现，接口照常能调、不产生费用、也不用填这个 key。
+      api-key: "填sk开头的密钥"
 
 aliyun:
   oss:

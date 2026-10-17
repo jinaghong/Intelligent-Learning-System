@@ -21,6 +21,20 @@ spring:
       # 保持它的默认值 10MB 就好
       max-file-size: 2MB
 
+  # Spring AI（P8）。spring-ai-starter-model-openai 引入后，chat/embedding/image
+  # 等自动配置「默认全开」，且 bean 创建时就要读 api-key——没配 key 会导致应用起不来。
+  # 所以默认 profile 把每个模型入口都设成 none（相当于拔掉插头），
+  # 真实调用只在 deepseek profile 下打开（application-deepseek.yml 里改回 openai）。
+  ai:
+    model:
+      chat: none
+      embedding: none
+      image: none
+      moderation: none
+      audio:
+        speech: none
+        transcription: none
+
 server:
   port: 8080
   servlet:

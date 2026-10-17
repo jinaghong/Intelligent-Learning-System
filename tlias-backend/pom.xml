@@ -29,6 +29,8 @@
         <jjwt.version>0.12.7</jjwt.version>
         <easyexcel.version>3.3.4</easyexcel.version>
         <aliyun-oss.version>3.18.5</aliyun-oss.version>
+        <!-- P8：1.1.8 是 mvn dependency:get 实测存在的版本（阿里云镜像可拉取） -->
+        <spring-ai.version>1.1.8</spring-ai.version>
     </properties>
 
     <dependencies>
@@ -168,6 +170,20 @@
             <groupId>com.aliyun.oss</groupId>
             <artifactId>aliyun-sdk-oss</artifactId>
             <version>${aliyun-oss.version}</version>
+        </dependency>
+
+        <!-- Spring AI（P8 AI 增强）。用途：AiChatService 的第二个实现
+             （DeepSeekAiChatServiceImpl）——DeepSeek 提供 OpenAI 兼容协议，
+             所以用 OpenAI 的 starter，把 base-url 指过去即可。
+
+             这个 starter 会带来 chat / embedding / image / audio / moderation
+             一整套自动配置，且「默认全开」；没配 api-key 时它们的 bean 创建会失败，
+             导致应用起不来。所以默认 profile 里用 spring.ai.model.*=none 全部关掉
+             （见 application.yml），激活 deepseek profile 才打开（application-deepseek.yml） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-openai</artifactId>
+            <version>${spring-ai.version}</version>
         </dependency>
 
         <dependency>

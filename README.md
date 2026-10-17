@@ -12,7 +12,7 @@
 | 语言 / 运行时 | Java 21 |
 | 后端框架 | Spring Boot 3.5.16 |
 | 持久层 | MyBatis-Plus 3.5.17 + MySQL 8.0.36 |
-| AI | Spring AI 1.1.8（`spring-ai-starter-model-openai` 指向 DeepSeek） |
+| AI | Spring AI 1.1.8（`spring-ai-starter-model-openai` 指向 DeepSeek；默认 Mock 实现，激活 `deepseek` profile 才真调用） |
 | 缓存 | Caffeine（`CacheService` 抽象，可切 Redis） |
 | 文件存储 | 本地磁盘（`FileStorageService` 抽象，可切阿里云 OSS） |
 | 认证 | JWT + 拦截器 + ThreadLocal |
@@ -54,6 +54,7 @@ GET http://localhost:8080/api/health
 |---|---|---|
 | `application.yml` | 是 | 公共配置：应用名、端口、context-path、profile 分组 |
 | `application-dev.yml` | 是 | 开发环境非敏感配置：日志级别、数据库 url/username |
+| `application-deepseek.yml` | 是 | 激活 `deepseek` profile 时启用真实 AI 调用（非敏感配置 + key 占位符） |
 | `application-local.yml` | **否** | 真实密码与 API Key，已被 `.gitignore` 排除 |
 | `application-local.yml.example` | 是 | 空模板，列出需要填的键 |
 
@@ -67,6 +68,20 @@ cp application-local.yml.example application-local.yml
 `application.yml` 里配置了 profile 分组，激活 `dev` 会自动连带激活 `local`，
 因此无需每次手敲 `--spring.profiles.active=dev,local`。
 
+## AI 功能（P8）
+
+两个只读接口（都需登录，见 Swagger）：`GET /api/ai/advice/{studentId}`（学习建议）、
+`GET /api/ai/questions?courseId=&count=&difficulty=`（智能出题）。
+
+**默认不激活 `deepseek` profile 时走 Mock 实现**：接口照常能调、不花 token，
+结果带 `[MOCK]` 标记。切到真实 DeepSeek：
+
+1. 在 `application-local.yml` 写 `spring.ai.openai.api-key: sk-xxx` 或设环境变量 `DEEPSEEK_API_KEY`
+2. 以 `dev,deepseek` 激活 profile 启动：`mvn spring-boot:run -Dspring-boot.run.profiles=dev,deepseek`
+
+每次调用的 prompt / 响应 / token 用量 / 耗时 / 成功失败都写进 `ai_call_log` 表；
+AI 调用失败时会降级（学习建议返回规则版摘要、出题返回友好提示），日志记 `status=0`。
+
 ## 实施阶段
 
 P0 工程骨架 → P0.5 建库建表 → **P1 通用层** → P2 登录认证 → P3 部门管理 →
@@ -78,8 +93,11 @@ P8 AI 增强 → P9 前端整合
 | P0 工程骨架 | ✅ 完成 |
 | P0.5 建库建表 | ✅ 完成（10 张表 + 253 行种子数据，已在 MySQL 8.0.36 实测验证） |
 | P1a 基础设施 | ✅ 完成（MyBatis-Plus、数据源、统一分页与异常处理） |
-| P1b 抽象层 | ⬜ 未开始（CacheService / FileStorageService） |
-| P2 及以后 | ⬜ 未开始 |
+| P1b 抽象层 | ✅ 完成（CacheService 可切 Redis；FileStorageService 可切 OSS，已真连验证） |
+| P2 登录认证 | ✅ 完成 |
+| P3~P7 业务 / 统计 / 日志 | ✅ 完成（部门、员工、班级、学员、课程、数据统计、AOP 操作日志） |
+| P8 AI 增强 | ✅ 实现完成（Mock 默认 + deepseek profile 真实现；174/174 全绿；真实 key 调用验证待做） |
+| P9 前端整合 | ⬜ 未开始 |
 
 ## 数据库
 
