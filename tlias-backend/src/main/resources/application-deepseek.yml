@@ -8,11 +8,11 @@
 #  不激活这个 profile 时：走 MockAiChatServiceImpl（确定性假数据），
 #  项目照常启动、接口照常能调，只是不真的花钱调模型。
 #
-#  真实 key 的两条路（本文件是提交版，key 永远不写在这里）：
-#    1) 环境变量 DEEPSEEK_API_KEY（推荐，优先级最高）
-#    2) application-local.yml 里写 spring.ai.openai.api-key: sk-xxx
-#  都没配时占位值只是个「能启动」的假 key——真调用会失败并走降级，
-#  ai_call_log 里记 status=0，不会把接口搞 500。
+#  真实 key 的来源（本文件是提交版，key 永远不写在这里）：
+#    1) application-local.yml 的 spring.ai.openai.api-key（本机开发用这个）
+#    2) 环境变量 DEEPSEEK_API_KEY（优先级最高）
+#  两个都没配时，启动会失败并提示 key 未设置——这是刻意的：
+#  激活 deepseek 就代表「我要真调用」，缺 key 应该立刻报错，而不是悄悄降级。
 # ============================================================
 
 spring:
@@ -21,10 +21,15 @@ spring:
       # 默认 profile 里 chat=none 被拔了插头，这里按回来
       chat: openai
     openai:
-      # DeepSeek 的 OpenAI 兼容端点（官方文档给出的兼容前缀）
-      base-url: https://api.deepseek.com/v1
-      api-key: ${DEEPSEEK_API_KEY:sk-not-configured}
+      # DeepSeek 的 OpenAI 兼容端点。
+      # 注意只写到根域名：Spring AI 会自动拼接 /v1/chat/completions，
+      # 如果这里写成 https://api.deepseek.com/v1 就会变成 /v1/v1/... → 404（P8 E2E 实测踩过）。
+      base-url: https://api.deepseek.com
       chat:
         options:
-          # 模型名待真实 key 到位后用一条 curl 验证再定稿（见 计划书-P8 第七节）
-          model: deepseek-chat
+          # 2026-10-17 用真实 key 调用 /v1/models 实测：平台只有两个模型——
+          #   deepseek-flash   （DeepSeek-V4.1-Flash，快且便宜）
+          #   deepseek-v4-pro  （DeepSeek-V4-Pro，更强）
+          # 原方案文档没错：deepseek-chat / deepseek-reasoner 确已退役。
+          # 两模型都带推理过程（响应里返回 reasoning_content）。
+          model: deepseek-flash

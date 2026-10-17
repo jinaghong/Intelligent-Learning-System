@@ -34,6 +34,12 @@ spring:
       audio:
         speech: none
         transcription: none
+    openai:
+      # key 的默认来源：环境变量 DEEPSEEK_API_KEY；本机开发也可以写在
+      # application-local.yml 的 spring.ai.openai.api-key（profile 文件会覆盖这里）。
+      # 默认 profile 下 chat 是关的、不会创建客户端 bean，所以空值不影响启动；
+      # 只有激活 deepseek profile 又没给 key 时才会启动失败（刻意为之，见该文件注释）。
+      api-key: ${DEEPSEEK_API_KEY:}
 
 server:
   port: 8080
