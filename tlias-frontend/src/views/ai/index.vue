@@ -158,12 +158,39 @@ import { getAdvice, getQuestions } from '@/api/ai'
 import { getCourses } from '@/api/course'
 import { getStudents } from '@/api/student'
 import { formatDateTime } from '@/utils/format'
+import { getUser } from '@/utils/token'
 
 const difficultyOptions = [
   { label: '简单', value: 1 },
   { label: '中等', value: 2 },
   { label: '困难', value: 3 }
 ]
+
+const AI_CACHE_KEY = 'tlias_ai_cache'
+
+function cacheOwnerId() {
+  return getUser()?.id ?? 'anonymous'
+}
+
+function readAiCache() {
+  try {
+    const cache = JSON.parse(localStorage.getItem(AI_CACHE_KEY) || 'null')
+    return cache?.ownerId === cacheOwnerId() ? cache : null
+  } catch {
+    return null
+  }
+}
+
+function writeAiCache(patch) {
+  try {
+    localStorage.setItem(
+      AI_CACHE_KEY,
+      JSON.stringify({ ...(readAiCache() || {}), ...patch, ownerId: cacheOwnerId() })
+    )
+  } catch {
+    // 存储被禁用或已满时，缓存失败不影响本次结果展示
+  }
+}
 
 const students = ref([])
 const courses = ref([])
@@ -195,8 +222,23 @@ async function loadOptions() {
     ])
     students.value = studentPage.rows ?? []
     courses.value = courseList ?? []
-    studentId.value = students.value[0]?.id ?? null
-    courseId.value = courses.value[0]?.id ?? null
+
+    const cache = readAiCache()
+    const cachedAdvice = cache?.advice
+    const adviceOwnerExists =
+      cachedAdvice && students.value.some((student) => student.id === cachedAdvice.studentId)
+    studentId.value = adviceOwnerExists ? cachedAdvice.studentId : students.value[0]?.id ?? null
+    if (adviceOwnerExists) advice.value = cachedAdvice
+
+    const cachedQuestions = cache?.questions
+    const questionsOwnerExists =
+      cachedQuestions && courses.value.some((course) => course.id === cachedQuestions.courseId)
+    courseId.value = questionsOwnerExists ? cachedQuestions.courseId : courses.value[0]?.id ?? null
+    if (questionsOwnerExists) {
+      questionCount.value = cachedQuestions.count ?? questionCount.value
+      difficulty.value = cachedQuestions.difficulty ?? difficulty.value
+      questions.value = cachedQuestions.list ?? []
+    }
   } catch {
     // 拦截器已提示
   }
@@ -211,6 +253,7 @@ async function generateAdvice() {
   advice.value = null
   try {
     advice.value = await getAdvice(studentId.value)
+    if (advice.value) writeAiCache({ advice: advice.value })
   } catch {
     // 拦截器已提示
   } finally {
@@ -232,6 +275,16 @@ async function generateQuestions() {
       count: questionCount.value,
       difficulty: difficulty.value
     })
+    if (questions.value.length) {
+      writeAiCache({
+        questions: {
+          courseId: courseId.value,
+          count: questionCount.value,
+          difficulty: difficulty.value,
+          list: questions.value
+        }
+      })
+    }
   } catch {
     // 拦截器已提示
   } finally {

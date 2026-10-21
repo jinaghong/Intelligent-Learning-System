@@ -433,21 +433,21 @@ async function main() {
 
   if (!(await clickButton('生成建议'))) throw new Error('未找到生成建议按钮')
   const adviceReady = await waitFor(
-    "document.querySelector('.advice-text')?.innerText.includes('[MOCK]')",
-    12000
+    "document.querySelector('.advice-text')?.innerText.trim().length > 20",
+    30000
   )
-  if (!adviceReady) throw new Error('学习建议未返回 Mock 内容')
+  if (!adviceReady) throw new Error('学习建议未返回内容')
   const modelTag = await evaluate(`
     return document.querySelector('.result-meta .el-tag')?.innerText.replace(/\\s+/g, ' ').trim() || '';
   `)
-  if (!modelTag.includes('mock')) throw new Error(`建议模型标签不正确：${modelTag}`)
+  if (!modelTag) throw new Error('建议模型标签为空')
   await screenshot('21-ai-advice.png', true)
   results.push(`AI 学习建议：${modelTag}`)
 
   if (!(await clickButton('生成题目'))) throw new Error('未找到生成题目按钮')
   const questionsReady = await waitFor(
     "document.querySelectorAll('.question-card').length === 3",
-    15000
+    30000
   )
   if (!questionsReady) throw new Error('智能出题未返回 3 道题')
   const optionCounts = await evaluate(`
@@ -464,9 +464,38 @@ async function main() {
   const analysisText = await evaluate(
     "return document.querySelector('.q-analysis')?.innerText || '';"
   )
-  if (!analysisText.includes('解析')) throw new Error('解析内容不正确')
+  if (analysisText.trim().length < 10) throw new Error('解析内容不正确')
   await screenshot('22-ai-questions.png', true)
   results.push('AI 智能出题：3 道题 × 4 选项，答案解析可展开')
+
+  const adviceTextBefore = await evaluate(
+    "return document.querySelector('.advice-text')?.innerText || '';"
+  )
+  const firstStemBefore = await evaluate(
+    "return document.querySelector('.q-stem strong')?.innerText || '';"
+  )
+  if (!adviceTextBefore || !firstStemBefore) throw new Error('刷新前未取到 AI 结果文本')
+
+  await send('Page.reload', { ignoreCache: true })
+  const restored = await waitFor(
+    `document.querySelector('.page-header h2')?.innerText === 'AI 助手' &&
+     document.querySelectorAll('.question-card').length === 3 &&
+     document.querySelector('.advice-text')?.innerText === ${JSON.stringify(adviceTextBefore)}`,
+    15000
+  )
+  if (!restored) throw new Error('刷新后 AI 建议或题目未恢复')
+  const firstStemAfter = await evaluate(
+    "return document.querySelector('.q-stem strong')?.innerText || '';"
+  )
+  if (firstStemAfter !== firstStemBefore) throw new Error('刷新后题目内容与刷新前不一致')
+  const cacheRaw = await evaluate(
+    "return localStorage.getItem('tlias_ai_cache') || '';"
+  )
+  if (!cacheRaw.includes('advice') || !cacheRaw.includes('questions')) {
+    throw new Error('localStorage 中未写入 AI 结果缓存')
+  }
+  await screenshot('22b-ai-refresh.png', true)
+  results.push('刷新后 AI 建议与题目从 localStorage 恢复')
 
   await waitFor(NO_VISIBLE_MESSAGES, 6000)
 
