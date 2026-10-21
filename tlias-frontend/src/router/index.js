@@ -13,13 +13,13 @@ export const menuRoutes = [
   {
     path: 'depts',
     name: 'Dept',
-    component: () => import('@/views/placeholder/index.vue'),
+    component: () => import('@/views/dept/index.vue'),
     meta: { title: '部门管理', icon: 'OfficeBuilding' }
   },
   {
     path: 'emps',
     name: 'Emp',
-    component: () => import('@/views/placeholder/index.vue'),
+    component: () => import('@/views/emp/index.vue'),
     meta: { title: '员工管理', icon: 'User' }
   },
   {

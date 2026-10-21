@@ -187,15 +187,15 @@ async function main() {
 
   const menuClicked = await evaluate(`
     const items = [...document.querySelectorAll('.el-menu-item')].filter((el) => el.offsetParent !== null);
-    const item = items.find((el) => el.textContent.trim() === '部门管理');
+    const item = items.find((el) => el.textContent.trim() === '课程管理');
     if (!item) return false;
     item.click();
     return true;
   `)
-  if (!menuClicked) throw new Error('未找到「部门管理」菜单')
+  if (!menuClicked) throw new Error('未找到「课程管理」菜单')
 
   const reachedPlaceholder = await waitFor("Boolean(document.querySelector('.placeholder-card'))", 8000)
-  if (!reachedPlaceholder) throw new Error('部门管理占位页未渲染')
+  if (!reachedPlaceholder) throw new Error('课程管理占位页未渲染')
   await sleep(500)
   const placeholderShot = await screenshot('04-placeholder.png')
   const placeholderText = await evaluate(
