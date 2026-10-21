@@ -4,7 +4,7 @@
       <div>
         <p class="eyebrow">CLASSES</p>
         <h2>班级管理</h2>
-        <p class="sub">条件分页查询 · 班主任关联 · 有学员的班级不允许删除</p>
+        <p class="sub">条件分页查询 · 班主任关联 · 点击班级名查看学员名单</p>
       </div>
       <div class="header-actions">
         <el-button type="primary" :icon="Plus" @click="openCreate">新增班级</el-button>
@@ -52,7 +52,14 @@
               <div class="clazz-cell">
                 <span class="clazz-badge">{{ row.subject ? subjectMap[row.subject] : '班' }}</span>
                 <div class="clazz-meta">
-                  <strong>{{ row.name }}</strong>
+                  <button
+                    type="button"
+                    class="clazz-name"
+                    title="查看学员名单"
+                    @click="openRoster(row)"
+                  >
+                    {{ row.name }}
+                  </button>
                   <span>{{ row.room || '教室待定' }}</span>
                 </div>
               </div>
@@ -109,6 +116,7 @@
     </div>
 
     <ClazzDialog v-model="dialogVisible" :clazz-id="editingId" @saved="handleSaved" />
+    <ClazzRosterDrawer v-model="rosterVisible" :clazz="rosterClazz" />
   </div>
 </template>
 
@@ -121,6 +129,7 @@ import { deleteClazz, getClazzs } from '@/api/clazz'
 import { clazzStatusMap, labelOf, subjectMap } from '@/utils/dict'
 import { formatDate } from '@/utils/format'
 import ClazzDialog from './components/ClazzDialog.vue'
+import ClazzRosterDrawer from './components/ClazzRosterDrawer.vue'
 
 const loading = ref(false)
 const rows = ref([])
@@ -128,6 +137,8 @@ const total = ref(0)
 const dateRange = ref([])
 const dialogVisible = ref(false)
 const editingId = ref(null)
+const rosterVisible = ref(false)
+const rosterClazz = ref(null)
 const query = reactive({
   name: '',
   begin: null,
@@ -195,6 +206,11 @@ function openEdit(row) {
   dialogVisible.value = true
 }
 
+function openRoster(row) {
+  rosterClazz.value = row
+  rosterVisible.value = true
+}
+
 function handleSaved(payload) {
   if (payload?.mode === 'create' && payload.name) {
     query.name = payload.name
@@ -258,9 +274,22 @@ onMounted(fetchList)
   line-height: 1.3;
 }
 
-.clazz-meta strong {
-  font-size: 13px;
+.clazz-name {
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--tl-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.clazz-name:hover {
+  color: var(--tl-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .clazz-meta span {

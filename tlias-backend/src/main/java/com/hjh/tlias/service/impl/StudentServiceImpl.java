@@ -16,6 +16,7 @@ import com.hjh.tlias.mapper.StudentMapper;
 import com.hjh.tlias.mapper.StudentViolationMapper;
 import com.hjh.tlias.service.StudentService;
 import com.hjh.tlias.vo.StudentDetailVO;
+import com.hjh.tlias.vo.StudentExportVO;
 import com.hjh.tlias.vo.StudentVO;
 import com.hjh.tlias.vo.ViolationVO;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,13 @@ public class StudentServiceImpl implements StudentService {
         Page<StudentVO> page = new Page<>(current, size);
         IPage<StudentVO> result = studentMapper.selectPageWithClazz(page, query);
         return PageResult.from(result);
+    }
+
+    @Override
+    public List<StudentExportVO> listForExport(StudentQueryDTO query) {
+        return studentMapper.selectListWithClazz(query).stream()
+                .map(this::toExportVO)
+                .toList();
     }
 
     @Override
@@ -155,6 +163,50 @@ public class StudentServiceImpl implements StudentService {
                 .eq(Student::getId, violationDTO.getStudentId())
                 .setSql("violation_count = violation_count + 1")
                 .setSql("violation_score = violation_score + " + violationDTO.getPoint()));
+    }
+
+    /** 列表 VO -> 导出 VO，把库里的编码翻成给人看的中文 */
+    private StudentExportVO toExportVO(StudentVO student) {
+        StudentExportVO vo = new StudentExportVO();
+        vo.setName(student.getName());
+        vo.setNo(student.getNo());
+        vo.setGender(genderText(student.getGender()));
+        vo.setPhone(student.getPhone() == null ? "" : student.getPhone());
+        vo.setDegree(degreeText(student.getDegree()));
+        vo.setClazzName(student.getClazzName() == null ? "" : student.getClazzName());
+        vo.setIsCollege(isCollegeText(student.getIsCollege()));
+        vo.setViolationCount(student.getViolationCount() == null ? 0 : student.getViolationCount());
+        vo.setViolationScore(student.getViolationScore() == null ? 0 : student.getViolationScore());
+        return vo;
+    }
+
+    private String genderText(Integer code) {
+        if (code == null) {
+            return "";
+        }
+        return code == 1 ? "男" : "女";
+    }
+
+    private String degreeText(Integer code) {
+        if (code == null) {
+            return "";
+        }
+        return switch (code) {
+            case 1 -> "初中";
+            case 2 -> "高中";
+            case 3 -> "专科";
+            case 4 -> "本科";
+            case 5 -> "硕士";
+            case 6 -> "博士";
+            default -> String.valueOf(code);
+        };
+    }
+
+    private String isCollegeText(Integer code) {
+        if (code == null) {
+            return "";
+        }
+        return code == 1 ? "是" : "否";
     }
 
     /** 违纪明细，新的在前 */

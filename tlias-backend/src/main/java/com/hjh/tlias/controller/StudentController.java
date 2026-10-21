@@ -6,11 +6,15 @@ import com.hjh.tlias.common.result.Result;
 import com.hjh.tlias.dto.StudentDTO;
 import com.hjh.tlias.dto.StudentQueryDTO;
 import com.hjh.tlias.dto.ViolationDTO;
+import com.hjh.tlias.service.ClazzService;
 import com.hjh.tlias.service.StudentService;
+import com.hjh.tlias.util.ExcelUtil;
 import com.hjh.tlias.vo.StudentDetailVO;
+import com.hjh.tlias.vo.StudentExportVO;
 import com.hjh.tlias.vo.StudentVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -36,10 +41,29 @@ public class StudentController {
 
     private final StudentService studentService;
 
+    /** 导出时要用班级名拼文件名，所以这里读一下班级 */
+    private final ClazzService clazzService;
+
     @GetMapping
     @Operation(summary = "条件分页查询学员")
     public Result<PageResult<StudentVO>> page(@Valid StudentQueryDTO query) {
         return Result.success(studentService.page(query));
+    }
+
+    /**
+     * 导出学员名单。
+     *
+     * 和员工导出同一套：返回文件流而不是 Result，导出全部符合条件的数据，
+     * 分页参数不参与；带 clazzId 时文件名用「班级名-学员名单」。
+     */
+    @GetMapping("/export")
+    @Operation(summary = "导出学员名单（Excel）")
+    public void export(StudentQueryDTO query, HttpServletResponse response) throws IOException {
+        String fileName = "学员名单";
+        if (query.getClazzId() != null) {
+            fileName = clazzService.getById(query.getClazzId()).getName() + "-学员名单";
+        }
+        ExcelUtil.write(response, studentService.listForExport(query), StudentExportVO.class, fileName);
     }
 
     @GetMapping("/{id}")

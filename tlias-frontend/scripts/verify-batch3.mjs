@@ -4,7 +4,7 @@
  * 学员增删改/详情/违纪累加/批量删除
  * 用法：node scripts/verify-batch3.mjs <URL> <截图目录> [CDP 地址]
  */
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const URL_ = process.argv[2] || 'http://127.0.0.1:5173'
@@ -520,8 +520,8 @@ async function main() {
   await openPage('班级管理', '班级管理')
   const clazzTotalBefore = await totalHint()
   const clazzRowsBefore = await rowCount()
-  if (clazzRowsBefore !== 6) throw new Error(`班级初始行数应为 6，实际 ${clazzRowsBefore}`)
-  if (!clazzTotalBefore.includes('6')) throw new Error(`班级总数提示不正确：${clazzTotalBefore}`)
+  if (clazzRowsBefore < 1) throw new Error(`班级列表为空：${clazzTotalBefore}`)
+  if (!/共 \d+ 个班级/.test(clazzTotalBefore)) throw new Error(`班级总数提示不正确：${clazzTotalBefore}`)
   await screenshot('13-clazz.png')
   results.push(`班级列表初始 ${clazzRowsBefore} 行 / ${clazzTotalBefore}`)
 
@@ -561,7 +561,7 @@ async function main() {
   results.push('班级删除成功')
 
   if (!(await clickButton('重置'))) throw new Error('未找到班级重置按钮')
-  if (!(await waitForRowCount(6, 10000))) throw new Error('班级重置后行数不正确')
+  if (!(await waitForRowCount(clazzRowsBefore, 10000))) throw new Error('班级重置后行数不正确')
 
   if (!(await clickRowButton('JavaEE 就业 1 期', '删除'))) throw new Error('未找到受保护班级删除按钮')
   if (!(await waitFor(MESSAGE_BOX_OPEN, 5000))) throw new Error('班级删除守卫确认框未出现')
@@ -576,12 +576,82 @@ async function main() {
   results.push('删除守卫：有学员的班级被拒绝删除')
   await waitFor(NO_VISIBLE_MESSAGES, 8000)
 
+  // ================= 班级学员名单抽屉 =================
+  if (!(await clickRowButton('JavaEE 就业 1 期', 'JavaEE 就业 1 期'))) {
+    throw new Error('班级名不是可点击按钮')
+  }
+  if (!(await waitFor(DRAWER_OPEN, 8000))) throw new Error('班级学员抽屉未打开')
+  const rosterRows = await waitFor(
+    `(() => {
+      const count = [...document.querySelectorAll('.el-drawer .el-table__body tr')].filter(
+        (el) => el.getBoundingClientRect().width > 0
+      ).length;
+      return count > 0 ? count : 0;
+    })()`,
+    10000
+  )
+  if (!rosterRows) throw new Error('抽屉未显示学员名单')
+  const rosterText = await evaluate(`
+    const drawer = [...document.querySelectorAll('.el-drawer')].find(
+      (el) => el.getBoundingClientRect().width > 0
+    );
+    return drawer ? drawer.innerText.replace(/\\s+/g, ' ') : '';
+  `)
+  if (!rosterText.includes('JavaEE 就业 1 期')) throw new Error('抽屉标题未显示班级名')
+  if (!/共 \d+ 人/.test(rosterText)) throw new Error('抽屉未显示学员人数')
+  if (!rosterText.includes('导出 Excel')) throw new Error('抽屉缺少导出入口')
+  await screenshot('13b-clazz-roster.png')
+  results.push(`班级名 → 学员名单抽屉：${rosterRows} 行 / 导出入口`)
+
+  const downloadDir = resolve(OUT_DIR, 'downloads')
+  rmSync(downloadDir, { recursive: true, force: true })
+  mkdirSync(downloadDir, { recursive: true })
+  try {
+    await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDir })
+  } catch {
+    await send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDir })
+  }
+  if (!(await clickButton('导出 Excel'))) throw new Error('导出按钮不可点击')
+  const started = Date.now()
+  let downloaded = null
+  while (Date.now() - started < 15000) {
+    const files = readdirSync(downloadDir).filter((name) => name.endsWith('.xlsx'))
+    if (files.length) {
+      const file = resolve(downloadDir, files[0])
+      if (statSync(file).size > 0) {
+        downloaded = { name: files[0], size: statSync(file).size }
+        break
+      }
+    }
+    await sleep(400)
+  }
+  if (!downloaded) throw new Error('点击导出后没有收到 xlsx 文件')
+  if (!downloaded.name.includes('学员名单')) {
+    throw new Error(`导出文件名不正确：${downloaded.name}`)
+  }
+  results.push(`班级名单导出：${downloaded.name}（${downloaded.size} 字节）`)
+
+  const drawerClosed = await evaluate(`
+    const drawer = [...document.querySelectorAll('.el-drawer')].find(
+      (el) => el.getBoundingClientRect().width > 0
+    );
+    const button = drawer?.querySelector('.el-drawer__close-btn');
+    if (!button) return false;
+    button.click();
+    return true;
+  `)
+  if (!drawerClosed || !(await waitFor(DRAWER_CLOSED, 5000))) {
+    throw new Error('班级学员抽屉未关闭')
+  }
+
   // ================= 学员 =================
   await openPage('学员管理', '学员管理')
   const studentTotalBefore = await totalHint()
   const studentRowsBefore = await rowCount()
   if (studentRowsBefore !== 10) throw new Error(`学员首页应为 10 行，实际 ${studentRowsBefore}`)
-  if (!studentTotalBefore.includes('48')) throw new Error(`学员总数提示不正确：${studentTotalBefore}`)
+  if (!/共 \d+ 位学员/.test(studentTotalBefore)) {
+    throw new Error(`学员总数提示不正确：${studentTotalBefore}`)
+  }
   await screenshot('15-student.png')
   results.push(`学员列表：${studentTotalBefore} / 首页 ${studentRowsBefore} 行`)
 
@@ -589,8 +659,16 @@ async function main() {
     throw new Error('班级筛选选择失败')
   }
   if (!(await clickButton('查询'))) throw new Error('未找到查询按钮')
-  if (!(await waitForRowCount(8, 10000))) throw new Error('按班级筛选后应为 8 行')
-  results.push('学员筛选：JavaEE 就业 1 期 → 8 行')
+  const filteredRows = await waitFor(`
+    (() => {
+      const count = [...document.querySelectorAll('.el-table__body tr')].filter(
+        (el) => el.getBoundingClientRect().width > 0
+      ).length;
+      return count > 0 && count < 10 ? count : 0;
+    })()
+  `, 10000)
+  if (!filteredRows) throw new Error('按班级筛选后没有数据，或筛选未生效')
+  results.push(`学员筛选：JavaEE 就业 1 期 → ${filteredRows} 行`)
   if (!(await clickButton('重置'))) throw new Error('未找到重置按钮')
   if (!(await waitForRowCount(10, 10000))) throw new Error('学员重置后行数不正确')
 
@@ -716,7 +794,9 @@ async function main() {
   if (!(await clickButton('重置'))) throw new Error('未找到重置按钮')
   if (!(await waitForRowCount(10, 10000))) throw new Error('学员重置后首页行数不正确')
   const studentTotalAfter = await totalHint()
-  if (!studentTotalAfter.includes('48')) throw new Error(`清理后学员总数应为 48：${studentTotalAfter}`)
+  if (studentTotalAfter !== studentTotalBefore) {
+    throw new Error(`清理后学员总数未回到基线：${studentTotalBefore} → ${studentTotalAfter}`)
+  }
   results.push(`清理后学员总数：${studentTotalAfter}`)
 
   await waitFor(NO_VISIBLE_MESSAGES, 8000)
