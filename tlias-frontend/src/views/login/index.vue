@@ -84,7 +84,7 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 import { InfoFilled, Lock, Right, User } from '@element-plus/icons-vue'
 
 import { useAuthStore } from '@/stores/auth'

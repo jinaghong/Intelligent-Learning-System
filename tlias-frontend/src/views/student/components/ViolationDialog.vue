@@ -40,7 +40,7 @@
 
 <script setup>
 import { reactive, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 
 import { addViolation } from '@/api/student'
 

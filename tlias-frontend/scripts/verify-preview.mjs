@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 批次 1 预览验收：登录 → 看板 → 占位页 → 404 → 路由守卫
+ * 批次 1 预览验收：登录 → 看板 → 课程页 → 404 → 路由守卫
  * 零依赖，使用本机 Chrome 的 DevTools Protocol。
  *
  * 用法：node scripts/verify-preview.mjs <URL> <截图目录> [CDP 地址]
@@ -187,19 +187,22 @@ async function main() {
 
   const menuClicked = await evaluate(`
     const items = [...document.querySelectorAll('.el-menu-item')].filter((el) => el.offsetParent !== null);
-    const item = items.find((el) => el.textContent.trim() === '操作日志');
+    const item = items.find((el) => el.textContent.trim() === '课程管理');
     if (!item) return false;
     item.click();
     return true;
   `)
-  if (!menuClicked) throw new Error('未找到「操作日志」菜单')
+  if (!menuClicked) throw new Error('未找到「课程管理」菜单')
 
-  const reachedPlaceholder = await waitFor("Boolean(document.querySelector('.placeholder-card'))", 8000)
-  if (!reachedPlaceholder) throw new Error('操作日志占位页未渲染')
-  await sleep(500)
-  const placeholderShot = await screenshot('04-placeholder.png')
-  const placeholderText = await evaluate(
-    "return (document.querySelector('.placeholder-card')?.innerText || '').replace(/\\s+/g, ' ').trim();"
+  const reachedPage = await waitFor(
+    "document.querySelector('.page-header h2')?.innerText === '课程管理'",
+    8000
+  )
+  if (!reachedPage) throw new Error('课程管理页未渲染')
+  await sleep(700)
+  const pageShot = await screenshot('04-course.png')
+  const pageText = await evaluate(
+    "return (document.querySelector('.page')?.innerText || '').replace(/\\s+/g, ' ').trim();"
   )
 
   await navigate(`${URL_}/this-path-does-not-exist`, 1800)
@@ -245,9 +248,9 @@ async function main() {
   console.log('当前用户:', dashboardState.user)
   console.log('截图:', dashboardShot)
   console.log('整页截图:', dashboardFullShot)
-  console.log('\n=== 占位页 ===')
-  console.log('文本:', placeholderText.slice(0, 160))
-  console.log('截图:', placeholderShot)
+  console.log('\n=== 课程管理页 ===')
+  console.log('文本:', pageText.slice(0, 160))
+  console.log('截图:', pageShot)
   console.log('\n=== 404 ===')
   console.log('文本:', notFoundText)
   console.log('截图:', notFoundShot)

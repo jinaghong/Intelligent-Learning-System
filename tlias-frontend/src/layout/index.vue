@@ -26,13 +26,13 @@
 
       <el-tooltip
         v-if="!collapsed"
-        content="后端 /ai/advice 与 /ai/questions 已就绪；默认 Mock 实现，切 deepseek profile 后调用真实模型。前端 AI 入口在批次 3/4 接入。"
+        content="「AI 助手」已接入后端 /ai/advice 与 /ai/questions；默认 Mock，切 deepseek profile 后调用真实模型，model 字段会显示实际来源。"
         placement="right"
         :show-after="200"
       >
         <div class="sidebar-foot">
           <span class="dot"></span>
-          AI 后端已就绪
+          AI 能力已接入
           <el-icon class="foot-info"><InfoFilled /></el-icon>
         </div>
       </el-tooltip>
@@ -90,7 +90,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from '@/utils/feedback'
 
 import { getHealth } from '@/api/system'
 import { useAuthStore } from '@/stores/auth'

@@ -88,7 +88,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 import { Refresh } from '@element-plus/icons-vue'
 
 import ChartCard from '@/components/ChartCard.vue'

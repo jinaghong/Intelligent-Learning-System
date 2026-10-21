@@ -149,7 +149,7 @@
 
 <script setup>
 import { computed, nextTick, reactive, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 import { Delete, Plus, Upload } from '@element-plus/icons-vue'
 
 import { getDepts } from '@/api/dept'

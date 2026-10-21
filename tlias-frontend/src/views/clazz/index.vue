@@ -114,7 +114,7 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from '@/utils/feedback'
 import { Delete, Edit, Plus, RefreshLeft, Search } from '@element-plus/icons-vue'
 
 import { deleteClazz, getClazzs } from '@/api/clazz'

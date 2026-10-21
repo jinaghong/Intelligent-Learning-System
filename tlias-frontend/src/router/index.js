@@ -41,9 +41,15 @@ export const menuRoutes = [
     meta: { title: '学员管理', icon: 'UserFilled' }
   },
   {
+    path: 'ai',
+    name: 'Ai',
+    component: () => import('@/views/ai/index.vue'),
+    meta: { title: 'AI 助手', icon: 'MagicStick' }
+  },
+  {
     path: 'logs',
     name: 'Log',
-    component: () => import('@/views/placeholder/index.vue'),
+    component: () => import('@/views/log/index.vue'),
     meta: { title: '操作日志', icon: 'Document' }
   }
 ]

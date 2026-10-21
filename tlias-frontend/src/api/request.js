@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 
 import { clearToken, clearUser, getToken } from '@/utils/token'
 

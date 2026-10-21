@@ -145,7 +145,7 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from '@/utils/feedback'
 import { Delete, Download, Edit, Plus, RefreshLeft, Search } from '@element-plus/icons-vue'
 
 import { deleteEmps, exportEmps, getEmps } from '@/api/emp'

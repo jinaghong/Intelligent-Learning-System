@@ -88,7 +88,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 
 import { createClazz, getClazzDetail, updateClazz } from '@/api/clazz'
 import { getEmps } from '@/api/emp'

@@ -98,7 +98,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '@/utils/feedback'
 
 import { createStudent, getStudentDetail, updateStudent } from '@/api/student'
 import { degreeOptions, genderOptions, isCollegeOptions } from '@/utils/dict'
