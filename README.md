@@ -16,18 +16,20 @@
 | 缓存 | Caffeine（`CacheService` 抽象，可切 Redis） |
 | 文件存储 | 本地磁盘（`FileStorageService` 抽象，可切阿里云 OSS） |
 | 认证 | JWT + 拦截器 + ThreadLocal |
-| 前端 | Vue3 + Vite + Element Plus + Pinia + ECharts |
+| 前端 | Vue 3.5 + Vite 6 + Element Plus 2.14 + Pinia 2.3 + Vue Router 4.6 + Axios 1.20 + ECharts 5.6（纯 JavaScript） |
 
 ## 目录结构
 
 ```
 .
 ├── tlias-backend/    后端（Spring Boot 单模块）
-├── tlias-frontend/   前端（P9 阶段创建）
-└── docs/             模块说明、面试追问清单、踩坑记录
+├── tlias-frontend/   前端（Vue3 SPA，P9 批次 1/2 已完成）
+└── docs/             设计/计划书、面试追问清单、踩坑记录、验收截图
 ```
 
 ## 本地启动
+
+### 后端
 
 ```bash
 cd tlias-backend
@@ -47,6 +49,32 @@ GET http://localhost:8080/api/health
 ```
 
 `code` 为 1 表示成功，0 表示失败。
+
+### 前端
+
+```bash
+cd tlias-frontend
+npm install
+npm run dev
+```
+
+- 开发地址：`http://127.0.0.1:5173`（`/api` 由 Vite 代理到 `http://localhost:8080`）
+- 演示账号：`liwei / 123456`
+- 生产构建：`npm run build`，产物在 `tlias-frontend/dist`
+- 当前已实现：登录、主布局、首页看板（4 KPI + 8 图）、部门管理、员工管理
+  （条件分页 / 头像上传 / 工作经历 / 批量删除 / Excel 导出）；课程、班级、学员、
+  操作日志、AI 页面为占位页，批次 3/4 实施
+
+浏览器验收脚本（需后端 + Vite 已启动，且 Chrome 带 `--remote-debugging-port=9222`）：
+
+```bash
+cd tlias-frontend
+node scripts/verify-preview.mjs http://127.0.0.1:5173 ../docs/p9-preview
+node scripts/verify-batch2.mjs http://127.0.0.1:5173 ../docs/p9-preview
+```
+
+脚本做真实登录/点击/上传/导出，断言 DOM、请求头、控制台错误并截图存证；
+测试数据与上传文件会自动清理。
 
 ## 配置分层与敏感信息
 
@@ -96,8 +124,8 @@ P8 AI 增强 → P9 前端整合
 | P1b 抽象层 | ✅ 完成（CacheService 可切 Redis；FileStorageService 可切 OSS，已真连验证） |
 | P2 登录认证 | ✅ 完成 |
 | P3~P7 业务 / 统计 / 日志 | ✅ 完成（部门、员工、班级、学员、课程、数据统计、AOP 操作日志） |
-| P8 AI 增强 | ✅ 实现完成（Mock 默认 + deepseek profile 真实现；174/174 全绿；真实 key 调用验证待做） |
-| P9 前端整合 | ⬜ 未开始 |
+| P8 AI 增强 | ✅ 完成（Mock 默认 + deepseek profile 真实现；174/174 全绿；已用真 key 验证 `deepseek-flash`） |
+| P9 前端整合 | 🟡 进行中（批次 1/2 完成：登录/布局/看板/部门/员工；批次 3/4 待做） |
 
 ## 数据库
 
