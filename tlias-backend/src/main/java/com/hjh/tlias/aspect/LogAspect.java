@@ -67,7 +67,8 @@ public class LogAspect {
             // proceed() 才是「真正去执行目标方法」。切面拿到的是它的返回值
             Object result = joinPoint.proceed();
             operLog.setStatus(1);
-            operLog.setReturnValue(objectMapper.writeValueAsString(result));
+            // 返回值也要脱敏：登录接口的返回体里带着 JWT，原样落库等于把凭证写进审计表
+            operLog.setReturnValue(serializeMasked(result));
             return result;
         } catch (Throwable e) {
             // 失败也要记（审计的意义就在于失败的操作也有据可查），
@@ -110,7 +111,7 @@ public class LogAspect {
         }
         try {
             JsonNode tree = objectMapper.valueToTree(kept);
-            maskPasswords(tree);
+            maskSensitiveFields(tree);
             return objectMapper.writeValueAsString(tree);
         } catch (Exception e) {
             // 序列化失败不该影响业务，留一个标记说明「这一行没记下参数」
@@ -118,15 +119,33 @@ public class LogAspect {
         }
     }
 
-    /** 递归遍历 JSON 树，把所有名为 password 的字段值替换成 ****** */
-    private void maskPasswords(JsonNode node) {
+    /**
+     * 返回值脱敏后再落库。
+     *
+     * 和入参一样：序列化失败不能反过来把业务搞挂，所以单独兜底成一行标记。
+     */
+    private String serializeMasked(Object value) {
+        try {
+            JsonNode tree = objectMapper.valueToTree(value);
+            maskSensitiveFields(tree);
+            return objectMapper.writeValueAsString(tree);
+        } catch (Exception e) {
+            return "[返回值序列化失败: " + e.getMessage() + "]";
+        }
+    }
+
+    /** 递归遍历 JSON 树，把密码与 token 的值替换成 ****** */
+    private void maskSensitiveFields(JsonNode node) {
         if (node instanceof ObjectNode obj) {
             if (obj.has("password")) {
                 obj.put("password", "******");
             }
-            obj.properties().forEach(entry -> maskPasswords(entry.getValue()));
+            if (obj.has("token")) {
+                obj.put("token", "******");
+            }
+            obj.properties().forEach(entry -> maskSensitiveFields(entry.getValue()));
         } else if (node instanceof ArrayNode arr) {
-            arr.forEach(this::maskPasswords);
+            arr.forEach(this::maskSensitiveFields);
         }
     }
 
