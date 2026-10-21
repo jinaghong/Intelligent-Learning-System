@@ -83,6 +83,8 @@ node scripts/verify-preview.mjs http://127.0.0.1:5173 ../docs/p9-preview
 node scripts/verify-batch2.mjs http://127.0.0.1:5173 ../docs/p9-preview
 node scripts/verify-batch3.mjs http://127.0.0.1:5173 ../docs/p9-preview
 node scripts/verify-batch4.mjs http://127.0.0.1:5173 ../docs/p9-preview
+# 真 key（先把后端切到 dev,deepseek）
+node scripts/verify-deepseek.mjs http://127.0.0.1:5173 ../docs/p9-preview
 ```
 
 生产产物验收把 URL 换成 `http://127.0.0.1:4173` 即可。
@@ -126,6 +128,9 @@ AI 调用失败时会降级（学习建议返回规则版摘要、出题返回�
 
 前端「AI 助手」页可直接体验两个能力；页面会显示返回的 `model` 字段
 （`mock` / 真实模型名 / `FALLBACK`），据此判断是否真的调用了大模型。
+2026-10-21 已从浏览器页面真实验证：后端 `dev,deepseek` 下建议与出题均返回
+`model=deepseek-flash`，`ai_call_log` 两条 `status=1`（截图
+`docs/p9-preview/23-ai-deepseek.png` / `24-ai-deepseek-questions.png`）。
 
 ## 实施阶段
 
@@ -142,7 +147,7 @@ P8 AI 增强 → P9 前端整合
 | P2 登录认证 | ✅ 完成 |
 | P3~P7 业务 / 统计 / 日志 | ✅ 完成（部门、员工、班级、学员、课程、数据统计、AOP 操作日志） |
 | P8 AI 增强 | ✅ 完成（Mock 默认 + deepseek profile 真实现；174/174 全绿；已用真 key 验证 `deepseek-flash`） |
-| P9 前端整合 | ✅ 完成（登录/布局/看板/部门/员工/课程/班级/学员/日志/AI 助手；dev 与生产构建均验收） |
+| P9 前端整合 | ✅ 完成（登录/布局/看板/部门/员工/课程/班级/学员/日志/AI 助手；dev 与生产构建均验收；AI 页面真 key E2E 通过） |
 
 ## 数据库
 
