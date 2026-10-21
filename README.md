@@ -23,7 +23,7 @@
 ```
 .
 ├── tlias-backend/    后端（Spring Boot 单模块）
-├── tlias-frontend/   前端（Vue3 SPA，P9 全部完成：9 个业务页 + AI 助手）
+├── tlias-frontend/   前端（Vue3 SPA，P9 全部完成：9 个页面，含 AI 助手）
 └── docs/             设计/计划书、面试追问清单、踩坑记录、验收截图
 ```
 
