@@ -3,7 +3,7 @@
  * 批次 2 验收：部门增删改 + 删除守卫；员工筛选/分页/增删改/工作经历回显/Excel 导出
  * 用法：node scripts/verify-batch2.mjs <URL> <截图目录> [CDP 地址]
  */
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -11,6 +11,7 @@ const URL_ = process.argv[2] || 'http://127.0.0.1:5173'
 const OUT_DIR = process.argv[3] || './preview'
 const CDP = process.argv[4] || 'http://127.0.0.1:9222'
 const DOWNLOAD_DIR = join(tmpdir(), 'tlias-downloads')
+const AVATAR_PATH = resolve(process.cwd(), 'scripts', 'fixtures', 'avatar.png')
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const DIALOG_OPEN = "[...document.querySelectorAll('.el-dialog')].some((el) => el.getBoundingClientRect().width > 0)"
@@ -224,9 +225,15 @@ async function waitForRowCount(count, timeout = 10000) {
   )
 }
 
-async function pickDate(placeholder) {
+async function pickDate(placeholder, scope = 'body') {
+  const rootExpr =
+    scope === '.el-dialog'
+      ? "[...document.querySelectorAll('.el-dialog')].find((el) => el.getBoundingClientRect().width > 0)"
+      : 'document'
   const rect = await evaluate(`
-    const input = [...document.querySelectorAll('input')].find(
+    const root = ${rootExpr};
+    if (!root) return null;
+    const input = [...root.querySelectorAll('input')].find(
       (el) => el.placeholder === ${JSON.stringify(placeholder)} && el.getBoundingClientRect().width > 0
     );
     if (!input) return null;
@@ -339,7 +346,7 @@ async function main() {
     }
   })
 
-  for (const domain of ['Page.enable', 'Runtime.enable', 'Log.enable', 'Network.enable']) {
+  for (const domain of ['Page.enable', 'Runtime.enable', 'Log.enable', 'Network.enable', 'DOM.enable']) {
     await send(domain)
   }
   try {
@@ -421,6 +428,28 @@ async function main() {
   await screenshot('08-emp-full.png', true)
   results.push(`员工列表：${empTotalBefore} / 当前页 ${empRowsBefore} 行`)
 
+  if (
+    !(await evaluate(`
+      const li = [...document.querySelectorAll('.el-pager li')].find((el) => el.textContent.trim() === '2');
+      li?.click();
+      return !!li;
+    `))
+  ) {
+    throw new Error('未找到分页第 2 页')
+  }
+  if (!(await waitForRowCount(5, 10000))) throw new Error('分页第 2 页应有 5 行')
+  if (
+    !(await evaluate(`
+      const li = [...document.querySelectorAll('.el-pager li')].find((el) => el.textContent.trim() === '1');
+      li?.click();
+      return !!li;
+    `))
+  ) {
+    throw new Error('未找到分页第 1 页')
+  }
+  if (!(await waitForRowCount(empRowsBefore, 10000))) throw new Error('返回第 1 页后行数不正确')
+  results.push('分页：第 2 页 5 行 → 第 1 页 10 行')
+
   if (!(await fillInput('支持模糊查询', '李伟'))) throw new Error('未找到姓名搜索框')
   if (!(await clickButton('查询'))) throw new Error('未找到查询按钮')
   if (!(await waitForRowCount(1, 10000))) throw new Error('按姓名筛选未得到 1 行')
@@ -437,6 +466,35 @@ async function main() {
   if (!(await fillInput('请输入初始密码', '123456'))) throw new Error('未找到密码输入框')
   if (!(await fillInput('请输入姓名', empName))) throw new Error('未找到姓名输入框')
   if (!(await pickDate('请选择入职日期'))) throw new Error('入职日期选择失败')
+
+  if (existsSync(AVATAR_PATH)) {
+    const doc = await send('DOM.getDocument')
+    const fileNode = await send('DOM.querySelector', {
+      nodeId: doc.root.nodeId,
+      selector: '.el-dialog input[type=file]'
+    })
+    if (!fileNode.nodeId) throw new Error('未找到头像上传输入框')
+    await send('DOM.setFileInputFiles', { files: [AVATAR_PATH], nodeId: fileNode.nodeId })
+    const avatarUploaded = await waitFor(
+      "Boolean([...document.querySelectorAll('.el-dialog .avatar-preview img')].find((img) => img.src.includes('/uploads/') && img.complete && img.naturalWidth > 0))",
+      10000
+    )
+    if (!avatarUploaded) throw new Error('头像上传后未回显')
+    results.push('头像上传成功')
+  }
+
+  if (!(await clickDialogButton('添加经历'))) throw new Error('未找到添加经历按钮')
+  if (!(await waitFor("document.querySelectorAll('.experience-row').length > 0", 5000))) {
+    throw new Error('添加经历后未出现经历行')
+  }
+  await sleep(400)
+  if (!(await pickDate('开始日期', '.el-dialog'))) throw new Error('工作经历开始日期选择失败')
+  if (!(await pickDate('结束日期', '.el-dialog'))) throw new Error('工作经历结束日期选择失败')
+  if (!(await fillInput('公司名称', 'P9测试公司'))) throw new Error('未找到公司名称输入框')
+  if (!(await fillInput('职位', '测试工程师'))) throw new Error('未找到经历职位输入框')
+  results.push('工作经历表单已填写')
+
+  await waitFor(NO_VISIBLE_MESSAGES, 8000)
   await sleep(300)
   await screenshot('09-emp-dialog.png')
   if (!(await clickDialogButton('保存'))) throw new Error('未找到员工保存按钮')
@@ -448,7 +506,19 @@ async function main() {
     `)
     throw new Error('员工新增后未出现在表格；表单错误：' + errors.join(' | '))
   }
-  results.push('员工新增成功（含入职日期）')
+  results.push('员工新增成功（含入职日期/头像/工作经历）')
+
+  const listAvatar = await evaluate(`
+    const img = document.querySelector('.el-table__body .emp-cell .el-avatar img');
+    return {
+      src: img?.src || '',
+      loaded: Boolean(img && img.complete && img.naturalWidth > 0)
+    };
+  `)
+  const listAvatarSrc = listAvatar.src
+  if (existsSync(AVATAR_PATH) && (!listAvatarSrc.includes('/uploads/') || !listAvatar.loaded)) {
+    throw new Error('员工列表未显示上传的头像')
+  }
 
   if (!(await clickRowButton(empName, '编辑'))) throw new Error('未找到新增员工的编辑按钮')
   if (!(await waitFor(DIALOG_OPEN, 8000))) throw new Error('编辑员工弹窗未打开')
@@ -457,6 +527,20 @@ async function main() {
     8000
   )
   if (!usernameLoaded) throw new Error('编辑弹窗未回显用户名')
+  const experienceLoaded = await waitFor(
+    "document.querySelector('.experience-row input[placeholder=\"公司名称\"]')?.value === 'P9测试公司'",
+    8000
+  )
+  if (!experienceLoaded) throw new Error('编辑弹窗未回显工作经历')
+  if (existsSync(AVATAR_PATH)) {
+    const editAvatar = await evaluate(`
+      const img = document.querySelector('.el-dialog .avatar-preview img');
+      return { src: img?.src || '', loaded: Boolean(img && img.complete && img.naturalWidth > 0) };
+    `)
+    if (!editAvatar.src.includes('/uploads/') || !editAvatar.loaded) {
+      throw new Error('编辑弹窗未回显头像')
+    }
+  }
   await sleep(300)
   if (!(await fillInput('请输入姓名', empName2))) throw new Error('未找到编辑姓名输入框')
   if (!(await clickDialogButton('保存'))) throw new Error('未找到编辑保存按钮')
@@ -465,13 +549,23 @@ async function main() {
   await fillInput('支持模糊查询', empName2)
   if (!(await clickButton('查询'))) throw new Error('未找到查询按钮')
   if (!(await waitForTableText(empName2, true, 10000))) throw new Error('员工编辑后未更新')
-  results.push('员工编辑成功（用户名回显）')
+  results.push('员工编辑成功（用户名/工作经历/头像回显）')
 
   if (!(await clickRowButton(empName2, '删除'))) throw new Error('未找到员工删除按钮')
   if (!(await waitFor(MESSAGE_BOX_OPEN, 5000))) throw new Error('员工删除确认框未出现')
   if (!(await clickMessageBoxButton('删除'))) throw new Error('未找到确认删除按钮')
   if (!(await waitForTableText(empName2, false, 10000))) throw new Error('员工删除后仍在表格')
   results.push('员工删除成功')
+
+  // 清掉测试上传产生的头像文件，避免 uploads 目录堆积
+  if (listAvatarSrc.includes('/api/uploads/')) {
+    const relative = decodeURIComponent(listAvatarSrc.split('/api/uploads/')[1])
+    try {
+      unlinkSync(resolve(process.cwd(), '..', 'tlias-backend', 'uploads', relative))
+    } catch {
+      // 文件不存在不影响验收
+    }
+  }
 
   if (!(await clickButton('重置'))) throw new Error('未找到重置按钮')
   if (!(await waitForRowCount(empRowsBefore, 10000))) throw new Error('员工删除后重置行数不正确')
