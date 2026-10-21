@@ -25,19 +25,19 @@ export const menuRoutes = [
   {
     path: 'courses',
     name: 'Course',
-    component: () => import('@/views/placeholder/index.vue'),
+    component: () => import('@/views/course/index.vue'),
     meta: { title: '课程管理', icon: 'Reading' }
   },
   {
     path: 'clazzs',
     name: 'Clazz',
-    component: () => import('@/views/placeholder/index.vue'),
+    component: () => import('@/views/clazz/index.vue'),
     meta: { title: '班级管理', icon: 'School' }
   },
   {
     path: 'students',
     name: 'Student',
-    component: () => import('@/views/placeholder/index.vue'),
+    component: () => import('@/views/student/index.vue'),
     meta: { title: '学员管理', icon: 'UserFilled' }
   },
   {
