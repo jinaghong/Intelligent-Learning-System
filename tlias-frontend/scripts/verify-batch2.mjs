@@ -16,6 +16,10 @@ const AVATAR_PATH = resolve(process.cwd(), 'scripts', 'fixtures', 'avatar.png')
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const DIALOG_OPEN = "[...document.querySelectorAll('.el-dialog')].some((el) => el.getBoundingClientRect().width > 0)"
 const DIALOG_CLOSED = "![...document.querySelectorAll('.el-dialog')].some((el) => el.getBoundingClientRect().width > 0)"
+const DRAWER_OPEN =
+  "[...document.querySelectorAll('.el-drawer')].some((el) => el.getBoundingClientRect().width > 0)"
+const DRAWER_CLOSED =
+  "![...document.querySelectorAll('.el-drawer')].some((el) => el.getBoundingClientRect().width > 0)"
 const MESSAGE_BOX_OPEN =
   "[...document.querySelectorAll('.el-message-box')].some((el) => el.getBoundingClientRect().width > 0)"
 const NO_VISIBLE_MESSAGES =
@@ -411,6 +415,64 @@ async function main() {
   results.push('删除守卫：学工部被拒绝删除')
   await waitFor(NO_VISIBLE_MESSAGES, 8000)
 
+  // ---------- 部门员工名单抽屉 ----------
+  if (!(await clickRowButton('学工部', '学工部'))) throw new Error('部门名不是可点击按钮')
+  if (!(await waitFor(DRAWER_OPEN, 8000))) throw new Error('部门员工抽屉未打开')
+  const deptRosterRows = await waitFor(
+    `(() => {
+      const count = [...document.querySelectorAll('.el-drawer .el-table__body tr')].filter(
+        (el) => el.getBoundingClientRect().width > 0
+      ).length;
+      return count > 0 ? count : 0;
+    })()`,
+    10000
+  )
+  if (!deptRosterRows) throw new Error('抽屉未显示部门员工')
+  const deptRosterText = await evaluate(`
+    const drawer = [...document.querySelectorAll('.el-drawer')].find(
+      (el) => el.getBoundingClientRect().width > 0
+    );
+    return drawer ? drawer.innerText.replace(/\\s+/g, ' ') : '';
+  `)
+  if (!deptRosterText.includes('学工部')) throw new Error('抽屉标题未显示部门名')
+  if (!/共 \d+ 位员工/.test(deptRosterText)) throw new Error('抽屉未显示员工人数')
+  if (!deptRosterText.includes('导出 Excel')) throw new Error('抽屉缺少导出入口')
+  await screenshot('07b-dept-roster.png')
+  results.push(`部门名 → 员工名单抽屉：${deptRosterRows} 行 / 导出入口`)
+
+  for (const file of readdirSync(DOWNLOAD_DIR).filter((name) => name.includes('员工名单'))) {
+    unlinkSync(join(DOWNLOAD_DIR, file))
+  }
+  exportResponse = null
+  if (!(await clickButton('导出 Excel'))) throw new Error('部门名单导出按钮不可点击')
+  const rosterExportStart = Date.now()
+  let rosterFile = null
+  while (Date.now() - rosterExportStart < 15000) {
+    const files = readdirSync(DOWNLOAD_DIR).filter(
+      (name) => name.includes('员工名单') && name.endsWith('.xlsx')
+    )
+    if (files.length && exportResponse?.status === 200) {
+      rosterFile = files[0]
+      break
+    }
+    await sleep(400)
+  }
+  if (!rosterFile) throw new Error('部门名单导出未收到 xlsx 文件')
+  results.push(`部门名单导出：${rosterFile}`)
+
+  const deptDrawerClosed = await evaluate(`
+    const drawer = [...document.querySelectorAll('.el-drawer')].find(
+      (el) => el.getBoundingClientRect().width > 0
+    );
+    const button = drawer?.querySelector('.el-drawer__close-btn');
+    if (!button) return false;
+    button.click();
+    return true;
+  `)
+  if (!deptDrawerClosed || !(await waitFor(DRAWER_CLOSED, 5000))) {
+    throw new Error('部门员工抽屉未关闭')
+  }
+
   // ---------- 员工 ----------
   if (!(await clickMenu('员工管理'))) throw new Error('未找到员工管理菜单')
   if (!(await waitFor("document.querySelector('.page-header h2')?.innerText === '员工管理'", 8000))) {
@@ -428,27 +490,35 @@ async function main() {
   await screenshot('08-emp-full.png', true)
   results.push(`员工列表：${empTotalBefore} / 当前页 ${empRowsBefore} 行`)
 
-  if (
-    !(await evaluate(`
-      const li = [...document.querySelectorAll('.el-pager li')].find((el) => el.textContent.trim() === '2');
-      li?.click();
-      return !!li;
-    `))
-  ) {
-    throw new Error('未找到分页第 2 页')
+  const empTotalCount = Number((empTotalBefore.match(/\d+/) || ['0'])[0])
+  if (empTotalCount > empRowsBefore) {
+    if (
+      !(await evaluate(`
+        const li = [...document.querySelectorAll('.el-pager li')].find((el) => el.textContent.trim() === '2');
+        li?.click();
+        return !!li;
+      `))
+    ) {
+      throw new Error('未找到分页第 2 页')
+    }
+    const expectedPage2 = Math.min(empRowsBefore, empTotalCount - empRowsBefore)
+    if (!(await waitForRowCount(expectedPage2, 10000))) {
+      throw new Error(`分页第 2 页应有 ${expectedPage2} 行`)
+    }
+    if (
+      !(await evaluate(`
+        const li = [...document.querySelectorAll('.el-pager li')].find((el) => el.textContent.trim() === '1');
+        li?.click();
+        return !!li;
+      `))
+    ) {
+      throw new Error('未找到分页第 1 页')
+    }
+    if (!(await waitForRowCount(empRowsBefore, 10000))) throw new Error('返回第 1 页后行数不正确')
+    results.push(`分页：第 2 页 ${expectedPage2} 行 → 第 1 页 ${empRowsBefore} 行`)
+  } else {
+    results.push(`分页：共 ${empTotalCount} 位员工，不足 2 页，跳过`)
   }
-  if (!(await waitForRowCount(5, 10000))) throw new Error('分页第 2 页应有 5 行')
-  if (
-    !(await evaluate(`
-      const li = [...document.querySelectorAll('.el-pager li')].find((el) => el.textContent.trim() === '1');
-      li?.click();
-      return !!li;
-    `))
-  ) {
-    throw new Error('未找到分页第 1 页')
-  }
-  if (!(await waitForRowCount(empRowsBefore, 10000))) throw new Error('返回第 1 页后行数不正确')
-  results.push('分页：第 2 页 5 行 → 第 1 页 10 行')
 
   if (!(await fillInput('支持模糊查询', '李伟'))) throw new Error('未找到姓名搜索框')
   if (!(await clickButton('查询'))) throw new Error('未找到查询按钮')

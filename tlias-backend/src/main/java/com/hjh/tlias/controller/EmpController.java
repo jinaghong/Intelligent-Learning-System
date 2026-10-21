@@ -5,6 +5,7 @@ import com.hjh.tlias.common.result.PageResult;
 import com.hjh.tlias.common.result.Result;
 import com.hjh.tlias.dto.EmpDTO;
 import com.hjh.tlias.dto.EmpQueryDTO;
+import com.hjh.tlias.service.DeptService;
 import com.hjh.tlias.service.EmpService;
 import com.hjh.tlias.util.ExcelUtil;
 import com.hjh.tlias.vo.EmpDetailVO;
@@ -35,6 +36,9 @@ import java.util.List;
 public class EmpController {
 
     private final EmpService empService;
+
+    /** 按部门导出时用部门名拼文件名 */
+    private final DeptService deptService;
 
     /**
      * 条件分页查询员工。
@@ -109,7 +113,11 @@ public class EmpController {
     @GetMapping("/export")
     @Operation(summary = "导出员工数据（Excel）")
     public void export(EmpQueryDTO query, HttpServletResponse response) throws IOException {
-        ExcelUtil.write(response, empService.listForExport(query), EmpExportVO.class, "员工表");
+        String fileName = "员工表";
+        if (query.getDeptId() != null) {
+            fileName = deptService.getById(query.getDeptId()).getName() + "-员工名单";
+        }
+        ExcelUtil.write(response, empService.listForExport(query), EmpExportVO.class, fileName);
     }
 
 }

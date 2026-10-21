@@ -4,7 +4,7 @@
       <div>
         <p class="eyebrow">DEPARTMENTS</p>
         <h2>部门管理</h2>
-        <p class="sub">共 {{ depts.length }} 个部门 · 有员工的部门不允许删除</p>
+        <p class="sub">共 {{ depts.length }} 个部门 · 点击部门名查看员工名单</p>
       </div>
       <div class="header-actions">
         <el-button type="primary" :icon="Plus" @click="openCreate">新增部门</el-button>
@@ -32,7 +32,14 @@
             <template #default="{ row }">
               <div class="dept-name">
                 <span class="dept-badge">{{ row.name.slice(0, 1) }}</span>
-                <strong>{{ row.name }}</strong>
+                <button
+                  type="button"
+                  class="dept-link"
+                  title="查看员工名单"
+                  @click="openRoster(row)"
+                >
+                  {{ row.name }}
+                </button>
               </div>
             </template>
           </el-table-column>
@@ -77,6 +84,8 @@
         <el-button type="primary" :loading="saving" @click="submit">保存</el-button>
       </template>
     </el-dialog>
+
+    <DeptRosterDrawer v-model="rosterVisible" :dept="rosterDept" />
   </div>
 </template>
 
@@ -86,6 +95,7 @@ import { ElMessage, ElMessageBox } from '@/utils/feedback'
 import { Delete, Edit, Plus, Search } from '@element-plus/icons-vue'
 
 import { createDept, deleteDept, getDepts, updateDept } from '@/api/dept'
+import DeptRosterDrawer from './components/DeptRosterDrawer.vue'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -93,6 +103,8 @@ const depts = ref([])
 const keyword = ref('')
 const dialogVisible = ref(false)
 const editing = ref(false)
+const rosterVisible = ref(false)
+const rosterDept = ref(null)
 const formRef = ref()
 const form = reactive({
   id: null,
@@ -131,6 +143,11 @@ function openEdit(row) {
   form.id = row.id
   form.name = row.name
   dialogVisible.value = true
+}
+
+function openRoster(row) {
+  rosterDept.value = row
+  rosterVisible.value = true
 }
 
 async function submit() {
@@ -200,5 +217,23 @@ onMounted(fetchDepts)
   color: var(--tl-primary);
   font-size: 13px;
   font-weight: 600;
+}
+
+.dept-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tl-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dept-link:hover {
+  color: var(--tl-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 </style>

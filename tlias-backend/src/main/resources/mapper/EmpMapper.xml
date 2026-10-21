@@ -59,6 +59,9 @@
             <if test="q.end != null">
                 AND e.entry_date &lt;= #{q.end}
             </if>
+            <if test="q.deptId != null">
+                AND e.dept_id = #{q.deptId}
+            </if>
         </where>
     </sql>
 
