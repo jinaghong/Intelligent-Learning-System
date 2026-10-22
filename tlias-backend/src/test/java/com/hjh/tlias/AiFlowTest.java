@@ -69,6 +69,9 @@ class AiFlowTest {
     private String studentName;
     private int violationCount;
 
+    /** 调用前已有的 AI 日志数：审计表会累积真实使用记录，断言只能看「本次新增」 */
+    private int aiLogBaseline;
+
     @BeforeEach
     void loginAndPickStudent() throws Exception {
         String body = mockMvc.perform(post("/login")
@@ -85,6 +88,7 @@ class AiFlowTest {
         studentId = ((Number) student.get("id")).longValue();
         studentName = (String) student.get("name");
         violationCount = ((Number) student.get("violation_count")).intValue();
+        aiLogBaseline = aiLogCount();
     }
 
     // ------------------------------------------------------------------
@@ -113,7 +117,7 @@ class AiFlowTest {
                         .header(jwtProperties.getTokenName(), token))
                 .andExpect(status().isOk());
 
-        assertEquals(1, aiLogCount(), "一次建议调用应该恰好产生一行 AI 调用日志");
+        assertEquals(aiLogBaseline + 1, aiLogCount(), "一次建议调用应该恰好产生一行 AI 调用日志");
         Map<String, Object> row = latestAiLog();
         assertEquals("ADVICE", row.get("biz_type"));
         assertEquals("mock", row.get("model"));
@@ -164,7 +168,7 @@ class AiFlowTest {
         mockMvc.perform(get("/ai/advice/" + studentId))
                 .andExpect(status().isUnauthorized());
 
-        assertEquals(0, aiLogCount(), "被拦截的请求不该产生 AI 调用日志");
+        assertEquals(aiLogBaseline, aiLogCount(), "被拦截的请求不该产生 AI 调用日志");
     }
 
     @Test
@@ -176,7 +180,7 @@ class AiFlowTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("学员不存在")));
 
-        assertEquals(0, aiLogCount(), "业务参数错误发生在调 AI 之前，不该写 AI 调用日志");
+        assertEquals(aiLogBaseline, aiLogCount(), "业务参数错误发生在调 AI 之前，不该写 AI 调用日志");
     }
 
     // ------------------------------------------------------------------
@@ -221,7 +225,7 @@ class AiFlowTest {
                         .param("count", "3"))
                 .andExpect(status().isOk());
 
-        assertEquals(1, aiLogCount(), "一次出题调用应该恰好产生一行日志");
+        assertEquals(aiLogBaseline + 1, aiLogCount(), "一次出题调用应该恰好产生一行日志");
         Map<String, Object> row = latestAiLog();
         assertEquals("QUESTION", row.get("biz_type"));
         assertEquals(1, ((Number) row.get("status")).intValue());
@@ -250,7 +254,7 @@ class AiFlowTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("出题数量最多 20 道"));
 
-        assertEquals(0, aiLogCount(), "参数校验失败发生在调 AI 之前，不该写日志");
+        assertEquals(aiLogBaseline, aiLogCount(), "参数校验失败发生在调 AI 之前，不该写日志");
     }
 
     @Test
@@ -271,7 +275,7 @@ class AiFlowTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("难度必须在 1~3 之间"));
 
-        assertEquals(0, aiLogCount(), "参数校验失败发生在调 AI 之前，不该写日志");
+        assertEquals(aiLogBaseline, aiLogCount(), "参数校验失败发生在调 AI 之前，不该写日志");
     }
 
     @Test
@@ -284,7 +288,7 @@ class AiFlowTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("课程不存在"));
 
-        assertEquals(0, aiLogCount(), "业务参数错误发生在调 AI 之前，不该写 AI 调用日志");
+        assertEquals(aiLogBaseline, aiLogCount(), "业务参数错误发生在调 AI 之前，不该写 AI 调用日志");
     }
 
     @Test

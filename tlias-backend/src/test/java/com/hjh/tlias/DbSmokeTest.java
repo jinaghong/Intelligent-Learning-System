@@ -42,8 +42,8 @@ class DbSmokeTest {
         EXPECTED_ROWS.put("student", 48);
         EXPECTED_ROWS.put("student_violation", 32);
         EXPECTED_ROWS.put("student_score", 120);
-        EXPECTED_ROWS.put("oper_log", 0);
-        EXPECTED_ROWS.put("ai_call_log", 0);
+        // oper_log / ai_call_log 是运行期不断累积的审计表，不是种子数据，
+        // 不能拿固定行数断言——否则开发时点几下页面，冒烟测试就红了
     }
 
     @Autowired

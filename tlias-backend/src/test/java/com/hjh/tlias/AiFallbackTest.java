@@ -63,6 +63,9 @@ class AiFallbackTest {
     private long studentId;
     private String studentName;
 
+    /** 调用前已有的 AI 日志数：审计表会累积真实使用记录，断言只能看「本次新增」 */
+    private int aiLogBaseline;
+
     @BeforeEach
     void loginAndPickStudent() throws Exception {
         String body = mockMvc.perform(post("/login")
@@ -76,6 +79,7 @@ class AiFallbackTest {
                 "SELECT id, name FROM student WHERE violation_count > 0 ORDER BY id LIMIT 1");
         studentId = ((Number) student.get("id")).longValue();
         studentName = (String) student.get("name");
+        aiLogBaseline = aiLogCount();
     }
 
     // ------------------------------------------------------------------
@@ -102,7 +106,7 @@ class AiFallbackTest {
                         .header(jwtProperties.getTokenName(), token))
                 .andExpect(status().isOk());
 
-        assertEquals(1, aiLogCount(), "失败的调用也要留一行账");
+        assertEquals(aiLogBaseline + 1, aiLogCount(), "失败的调用也要留一行账");
         Map<String, Object> row = latestAiLog();
         assertEquals("ADVICE", row.get("biz_type"));
         assertEquals(0, ((Number) row.get("status")).intValue(), "降级行的 status 应该是 0");
@@ -127,7 +131,7 @@ class AiFallbackTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("智能出题服务暂时不可用，请稍后重试"));
 
-        assertEquals(1, aiLogCount());
+        assertEquals(aiLogBaseline + 1, aiLogCount());
         Map<String, Object> row = latestAiLog();
         assertEquals("QUESTION", row.get("biz_type"));
         assertEquals(0, ((Number) row.get("status")).intValue());

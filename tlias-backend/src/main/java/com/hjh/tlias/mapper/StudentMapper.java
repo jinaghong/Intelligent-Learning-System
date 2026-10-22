@@ -8,6 +8,8 @@ import com.hjh.tlias.vo.StudentDetailVO;
 import com.hjh.tlias.vo.StudentVO;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 /**
  * 学员 Mapper。
  *
@@ -18,6 +20,9 @@ public interface StudentMapper extends BaseMapper<Student> {
 
     /** 条件分页查询学员（带班级名） */
     IPage<StudentVO> selectPageWithClazz(IPage<StudentVO> page, @Param("q") StudentQueryDTO query);
+
+    /** 条件查询全部学员（导出用，不分页） */
+    List<StudentVO> selectListWithClazz(@Param("q") StudentQueryDTO query);
 
     /**
      * 按 id 查一个学员（带班级名）。

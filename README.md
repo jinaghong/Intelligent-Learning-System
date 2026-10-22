@@ -16,18 +16,20 @@
 | 缓存 | Caffeine（`CacheService` 抽象，可切 Redis） |
 | 文件存储 | 本地磁盘（`FileStorageService` 抽象，可切阿里云 OSS） |
 | 认证 | JWT + 拦截器 + ThreadLocal |
-| 前端 | Vue3 + Vite + Element Plus + Pinia + ECharts |
+| 前端 | Vue 3.5 + Vite 6 + Element Plus 2.14 + Pinia 2.3 + Vue Router 4.6 + Axios 1.20 + ECharts 5.6（纯 JavaScript） |
 
 ## 目录结构
 
 ```
 .
 ├── tlias-backend/    后端（Spring Boot 单模块）
-├── tlias-frontend/   前端（P9 阶段创建）
-└── docs/             模块说明、面试追问清单、踩坑记录
+├── tlias-frontend/   前端（Vue3 SPA，P9 全部完成：9 个页面，含 AI 助手）
+└── docs/             设计/计划书、面试追问清单、踩坑记录、验收截图
 ```
 
 ## 本地启动
+
+### 后端
 
 ```bash
 cd tlias-backend
@@ -47,6 +49,48 @@ GET http://localhost:8080/api/health
 ```
 
 `code` 为 1 表示成功，0 表示失败。
+
+### 前端
+
+```bash
+cd tlias-frontend
+npm install
+npm run dev
+```
+
+- 开发地址：`http://127.0.0.1:5173`（`/api` 由 Vite 代理到 `http://localhost:8080`）
+- 演示账号：`liwei / 123456`
+- 生产构建：`npm run build`，产物在 `tlias-frontend/dist`
+- 当前已实现：登录、主布局、首页看板（4 KPI + 8 图）、部门管理、员工管理
+  （条件分页 / 头像上传 / 工作经历 / 批量删除 / Excel 导出）、课程管理、
+  班级管理（班主任 / 日期校验）、学员管理（详情 / 违纪累计 / 批量删除）、
+  操作日志（分页 / JSON 详情 / 凭证脱敏）、AI 助手（学习建议 / 智能出题）
+- 生产构建与预览：
+
+  ```bash
+  npm run build
+  npm run preview   # http://127.0.0.1:4173，已配置 /api 代理
+  ```
+
+- Element Plus 按组件子路径导入、ECharts 按需注册；`dist` 约 1.8MB，
+  最大 chunk 558KB（gzip 193KB）
+
+浏览器验收脚本（需后端 + 前端已启动，且 Chrome 带 `--remote-debugging-port=9222`）：
+
+```bash
+cd tlias-frontend
+node scripts/verify-preview.mjs http://127.0.0.1:5173 ../docs/p9-preview
+node scripts/verify-batch2.mjs http://127.0.0.1:5173 ../docs/p9-preview
+node scripts/verify-batch3.mjs http://127.0.0.1:5173 ../docs/p9-preview
+node scripts/verify-batch4.mjs http://127.0.0.1:5173 ../docs/p9-preview
+# 真 key（先把后端切到 dev,deepseek）
+node scripts/verify-deepseek.mjs http://127.0.0.1:5173 ../docs/p9-preview
+```
+
+生产产物验收把 URL 换成 `http://127.0.0.1:4173` 即可。
+
+脚本做真实登录/点击/上传/导出，断言 DOM、请求头、控制台错误并截图存证；
+测试数据与上传文件会自动清理。
 
 ## 配置分层与敏感信息
 
@@ -82,6 +126,12 @@ cp application-local.yml.example application-local.yml
 每次调用的 prompt / 响应 / token 用量 / 耗时 / 成功失败都写进 `ai_call_log` 表；
 AI 调用失败时会降级（学习建议返回规则版摘要、出题返回友好提示），日志记 `status=0`。
 
+前端「AI 助手」页可直接体验两个能力；页面会显示返回的 `model` 字段
+（`mock` / 真实模型名 / `FALLBACK`），据此判断是否真的调用了大模型。
+2026-10-21 已从浏览器页面真实验证：后端 `dev,deepseek` 下建议与出题均返回
+`model=deepseek-flash`，`ai_call_log` 两条 `status=1`（截图
+`docs/p9-preview/23-ai-deepseek.png` / `24-ai-deepseek-questions.png`）。
+
 ## 实施阶段
 
 P0 工程骨架 → P0.5 建库建表 → **P1 通用层** → P2 登录认证 → P3 部门管理 →
@@ -96,8 +146,8 @@ P8 AI 增强 → P9 前端整合
 | P1b 抽象层 | ✅ 完成（CacheService 可切 Redis；FileStorageService 可切 OSS，已真连验证） |
 | P2 登录认证 | ✅ 完成 |
 | P3~P7 业务 / 统计 / 日志 | ✅ 完成（部门、员工、班级、学员、课程、数据统计、AOP 操作日志） |
-| P8 AI 增强 | ✅ 实现完成（Mock 默认 + deepseek profile 真实现；174/174 全绿；真实 key 调用验证待做） |
-| P9 前端整合 | ⬜ 未开始 |
+| P8 AI 增强 | ✅ 完成（Mock 默认 + deepseek profile 真实现；174/174 全绿；已用真 key 验证 `deepseek-flash`） |
+| P9 前端整合 | ✅ 完成（登录/布局/看板/部门/员工/课程/班级/学员/日志/AI 助手；dev 与生产构建均验收；AI 页面真 key E2E 通过） |
 
 ## 数据库
 

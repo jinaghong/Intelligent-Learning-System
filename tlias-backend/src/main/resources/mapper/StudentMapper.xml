@@ -72,6 +72,16 @@
         ORDER BY s.id
     </select>
 
+    <!-- 导出用：和分页共用筛选条件，但不带 LIMIT，导的是全部符合条件的数据 -->
+    <select id="selectListWithClazz" resultType="com.hjh.tlias.vo.StudentVO">
+        SELECT
+        <include refid="listColumns"/>
+        FROM student s
+        LEFT JOIN clazz c ON c.id = s.clazz_id
+        <include refid="queryConditions"/>
+        ORDER BY s.id
+    </select>
+
     <select id="selectDetailById" resultType="com.hjh.tlias.vo.StudentDetailVO">
         SELECT
         <include refid="detailColumns"/>

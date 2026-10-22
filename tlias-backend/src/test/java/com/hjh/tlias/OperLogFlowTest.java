@@ -177,6 +177,11 @@ class OperLogFlowTest {
         assertTrue(params.contains(USERNAME), "入参里应该有用户名，实际 " + params);
         assertFalse(params.contains(PASSWORD), "入参里不能有明文密码，实际 " + params);
         assertNotNull(row.get("ip"), "登录日志必须带 IP——异地登录审计就靠它");
+
+        String returned = row.get("return_value").toString();
+        assertTrue(returned.contains("******"), "返回值里的 token 应该被脱敏，实际 " + returned);
+        assertFalse(returned.contains(token),
+                "返回值里绝不能出现明文 JWT——审计表泄漏 token 等于泄漏登录凭证，实际 " + returned);
     }
 
     @Test
@@ -253,6 +258,8 @@ class OperLogFlowTest {
     @DisplayName("9. 违纪处理 → 记一行且只记一行（切面无重复织入），入参含 studentId")
     void violationShouldBeLoggedExactlyOnce() throws Exception {
         Long studentId = jdbcTemplate.queryForObject("SELECT id FROM student LIMIT 1", Long.class);
+        Long maxLogIdBefore = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(MAX(id), 0) FROM oper_log", Long.class);
         String violationJson = "{\"studentId\":" + studentId + ",\"point\":2,\"description\":\"日志测试违纪\"}";
 
         mockMvc.perform(post("/students/violation")
@@ -263,9 +270,11 @@ class OperLogFlowTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
+        // 按「本次请求新增的日志行」计数：audit 表本来就会累积历史操作，
+        // 用 LIKE '%1%' 会把 studentId=11、21、41 的历史行也算进来
         Long count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM oper_log WHERE method_name='addViolation'"
-                        + " AND method_params LIKE '%" + studentId + "%'", Long.class);
+                "SELECT COUNT(*) FROM oper_log WHERE id > ? AND method_name='addViolation'",
+                Long.class, maxLogIdBefore);
         assertEquals(1L, count, "一次违纪请求应该恰好产生一行日志，实际 " + count);
     }
 

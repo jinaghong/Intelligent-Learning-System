@@ -33,6 +33,9 @@ public class EmpQueryDTO {
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate end;
 
+    /** 所属部门，精确匹配；为空表示不按部门筛选 */
+    private Long deptId;
+
     /**
      * 第几页，从 1 开始。
      *
