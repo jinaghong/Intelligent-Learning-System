@@ -71,10 +71,6 @@
           </el-button>
         </el-form>
 
-        <div class="demo-tip">
-          <el-icon><InfoFilled /></el-icon>
-          <span>演示账号 <b>liwei</b> / 密码 <b>123456</b></span>
-        </div>
         <p class="login-foot">登录即表示你已阅读并同意内部使用规范</p>
       </div>
     </section>
@@ -85,7 +81,7 @@
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from '@/utils/feedback'
-import { InfoFilled, Lock, Right, User } from '@element-plus/icons-vue'
+import { Lock, Right, User } from '@element-plus/icons-vue'
 
 import { useAuthStore } from '@/stores/auth'
 
@@ -309,22 +305,6 @@ async function submit() {
 
 .submit-icon {
   margin-left: 8px;
-}
-
-.demo-tip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 22px;
-  padding: 11px 13px;
-  border-radius: 11px;
-  background: #eef2ff;
-  font-size: 12.5px;
-  color: #4338ca;
-}
-
-.demo-tip .el-icon {
-  font-size: 15px;
 }
 
 .login-foot {
