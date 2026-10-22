@@ -27,6 +27,8 @@ const consoleErrors = []
 const exceptions = []
 const badResponses = []
 const failedRequests = []
+let adviceRequests = 0
+let questionRequests = 0
 
 function send(method, params = {}) {
   const id = ++msgId
@@ -278,6 +280,15 @@ async function waitForRowCount(count, timeout = 10000) {
   )
 }
 
+async function waitForRequestCount(read, before, timeout = 30000) {
+  const started = Date.now()
+  while (Date.now() - started < timeout) {
+    if (read() > before) return true
+    await sleep(250)
+  }
+  return false
+}
+
 async function closeDialog() {
   return evaluate(`
     const dialog = [...document.querySelectorAll('.el-dialog')].find(
@@ -346,6 +357,10 @@ async function main() {
         exceptions.push(params.exceptionDetails.exception?.description || params.exceptionDetails.text)
       } else if (method === 'Log.entryAdded' && params.entry.level === 'error') {
         consoleErrors.push(`[log] ${params.entry.text}`)
+      } else if (method === 'Network.requestWillBeSent') {
+        const url = params.request?.url || ''
+        if (/\/ai\/advice\//.test(url)) adviceRequests += 1
+        else if (/\/ai\/questions\b/.test(url)) questionRequests += 1
       } else if (method === 'Network.responseReceived' && params.response.status >= 400) {
         badResponses.push(`${params.response.status} ${params.response.url}`)
       } else if (method === 'Network.loadingFailed') {
@@ -496,6 +511,69 @@ async function main() {
   }
   await screenshot('22b-ai-refresh.png', true)
   results.push('刷新后 AI 建议与题目从 localStorage 恢复')
+
+  const refreshButtons = await evaluate(`
+    return [...document.querySelectorAll('.ai-card')].map((card) => {
+      const button = card.querySelector('.card-head .refresh-button');
+      if (!button) return null;
+      const cardRect = card.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+      return {
+        label: button.getAttribute('aria-label') || '',
+        disabled: button.disabled,
+        rightAligned: buttonRect.right >= cardRect.right - 60
+      };
+    });
+  `)
+  if (
+    refreshButtons.length !== 2 ||
+    refreshButtons.some((item) => !item || item.disabled || !item.rightAligned)
+  ) {
+    throw new Error(`AI 卡片刷新按钮缺失或状态不正确：${JSON.stringify(refreshButtons)}`)
+  }
+  if (
+    refreshButtons[0].label !== '重新生成学习建议' ||
+    refreshButtons[1].label !== '重新生成题目'
+  ) {
+    throw new Error(`刷新按钮标识不正确：${JSON.stringify(refreshButtons)}`)
+  }
+  await screenshot('22c-ai-refresh-buttons.png', true)
+
+  const adviceRequestsBefore = adviceRequests
+  const adviceRefreshClicked = await evaluate(`
+    const button = document.querySelector('.ai-card button[aria-label="重新生成学习建议"]');
+    if (!button || button.disabled) return false;
+    button.click();
+    return true;
+  `)
+  if (!adviceRefreshClicked) throw new Error('学习建议刷新按钮不可点击')
+  if (!(await waitForRequestCount(() => adviceRequests, adviceRequestsBefore))) {
+    throw new Error('点击刷新后未重新请求学习建议')
+  }
+  if (
+    !(await waitFor(
+      "document.querySelector('.advice-text')?.innerText.trim().length > 20",
+      30000
+    ))
+  ) {
+    throw new Error('重新生成学习建议后未渲染结果')
+  }
+
+  const questionRequestsBefore = questionRequests
+  const questionRefreshClicked = await evaluate(`
+    const button = document.querySelector('.ai-card button[aria-label="重新生成题目"]');
+    if (!button || button.disabled) return false;
+    button.click();
+    return true;
+  `)
+  if (!questionRefreshClicked) throw new Error('智能出题刷新按钮不可点击')
+  if (!(await waitForRequestCount(() => questionRequests, questionRequestsBefore))) {
+    throw new Error('点击刷新后未重新请求智能出题')
+  }
+  if (!(await waitFor("document.querySelectorAll('.question-card').length === 3", 30000))) {
+    throw new Error('重新生成题目后未渲染结果')
+  }
+  results.push('AI 卡片右上角刷新按钮：重新请求并渲染建议与题目')
 
   await waitFor(NO_VISIBLE_MESSAGES, 6000)
 

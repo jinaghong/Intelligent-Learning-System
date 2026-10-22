@@ -33,6 +33,17 @@
             <h3>学习建议</h3>
             <p>基于学员成绩与违纪数据，为班主任生成可执行建议</p>
           </div>
+          <el-tooltip content="重新生成" placement="top">
+            <el-button
+              class="refresh-button"
+              circle
+              :icon="Refresh"
+              :loading="adviceLoading"
+              :disabled="!studentId"
+              aria-label="重新生成学习建议"
+              @click="generateAdvice"
+            />
+          </el-tooltip>
         </div>
 
         <div class="control-row">
@@ -83,6 +94,17 @@
             <h3>智能出题</h3>
             <p>按课程、数量、难度生成练习题，含答案与解析</p>
           </div>
+          <el-tooltip content="重新生成" placement="top">
+            <el-button
+              class="refresh-button"
+              circle
+              :icon="Refresh"
+              :loading="questionsLoading"
+              :disabled="!courseId"
+              aria-label="重新生成题目"
+              @click="generateQuestions"
+            />
+          </el-tooltip>
         </div>
 
         <div class="control-stack">
@@ -152,7 +174,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from '@/utils/feedback'
-import { MagicStick, Promotion, Reading } from '@element-plus/icons-vue'
+import { MagicStick, Promotion, Reading, Refresh } from '@element-plus/icons-vue'
 
 import { getAdvice, getQuestions } from '@/api/ai'
 import { getCourses } from '@/api/course'
@@ -394,6 +416,11 @@ onMounted(loadOptions)
   margin-top: 3px;
   font-size: 12px;
   color: var(--tl-muted);
+}
+
+.refresh-button {
+  flex: none;
+  margin-left: auto;
 }
 
 .control-row {
