@@ -1,0 +1,41 @@
+# ============================================================================
+#  虚拟机（Ubuntu 24.04）专用配置模板
+#
+#  安装位置：/opt/tlias/config/application-local.yml   权限 600，属主 tlias
+#
+#  为什么放外部文件就能生效：
+#    打包时已经把 jar 内的 classpath:application-local.yml 剔除了；
+#    Spring Boot 的默认配置搜索顺序是
+#      classpath:/  →  classpath:/config/  →  file:./  →  file:./config/
+#    越靠后优先级越高，而 systemd 的 WorkingDirectory=/opt/tlias，
+#    所以 /opt/tlias/config/application-local.yml 会被最后加载、覆盖一切。
+#
+#  想换成环境变量也行（优先级更高）：DB_PASSWORD / JWT_SECRET / DEEPSEEK_API_KEY
+# ============================================================================
+
+spring:
+  datasource:
+    # Ubuntu 的 MySQL root 走 auth_socket 认证，JDBC 用密码连不上，
+    # 所以 02 脚本会建一个专用账号 tlias，这里就用它
+    username: tlias
+    password: "把 02 脚本里设的密码填进来"
+
+    # 如果 MySQL 不在本机，才需要覆盖 url；同机部署不用动
+    # url: jdbc:mysql://localhost:3306/tlias?serverTimezone=Asia/Shanghai&characterEncoding=utf8&sslMode=DISABLED&allowPublicKeyRetrieval=true
+
+tlias:
+  jwt:
+    # 生成方式：openssl rand -base64 48
+    # 不能照抄开发机那份：密钥一旦随 jar 或截图外流，任何人都能伪造 token
+    secret-key: "把 openssl rand -base64 48 的输出填进来"
+
+storage:
+  local:
+    dir: uploads
+    # ⚠️ 全项目最容易忘的一行，改了它，浏览器里的头像才不会全裂
+    base-url: http://192.168.100.100/api
+
+logging:
+  level:
+    # 开发配置是 debug（会把每条 SQL 打出来），生产降一档，省 IO 也省日志盘
+    com.hjh.tlias: info

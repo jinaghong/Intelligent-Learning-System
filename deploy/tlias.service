@@ -1,0 +1,25 @@
+[Unit]
+Description=tlias-backend (智能学习辅助系统)
+Documentation=https://github.com/hjh/tlias
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tlias
+Group=tlias
+# uploads/ 相对这个目录解析，改它等于改上传文件落盘位置
+WorkingDirectory=/opt/tlias
+# 可选文件，不存在也不报错（- 前缀）。里面放 TZ / DEEPSEEK_API_KEY 这类
+EnvironmentFile=-/opt/tlias/tlias.env
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -Duser.timezone=Asia/Shanghai -Dfile.encoding=UTF-8 -jar /opt/tlias/tlias-backend.jar
+# 被 kill 时 JVM 退出码是 143（128+15），不声明的话 systemd 会当成失败
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tlias
+
+[Install]
+WantedBy=multi-user.target

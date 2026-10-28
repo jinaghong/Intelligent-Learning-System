@@ -57,3 +57,8 @@ out/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# 部署产物：发布包与本地产物目录
+/deploy/tlias-deploy.tar.gz
+/deploy/.stage/
+/deploy/out/
